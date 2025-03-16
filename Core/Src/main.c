@@ -162,9 +162,9 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
-double Kp;
-double Ki;
-double Kd;
+double Kp = 2.0;
+double Ki = 0.01;
+double Kd = 0.1;
 double dt = 1/500.0f;
 double inte_error;
 double last_error;
