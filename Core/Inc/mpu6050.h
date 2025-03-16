@@ -153,12 +153,20 @@ typedef struct {
   float roll;
   float yaw;
 } EulerAngle;
-void init_estimator(AttitudeEstimator* est);
-void update_attitude(AttitudeEstimator* est,
+void MPU6050_init_estimator(AttitudeEstimator* est);
+void MPU6050_update_attitude(AttitudeEstimator* est,
                     float ax, float ay, float az,  // 加速度计(m/s²)
                     float gx, float gy, float gz);
-void get_euler_angles(const AttitudeEstimator* est,
+void MPU6050_get_euler_angles(const AttitudeEstimator* est,
                      float* roll, float* pitch, float* yaw);
+float MPU6050_getKP();
+float MPU6050_getKI();
+float MPU6050_getDT();
+float MPU6050_setKP(float);
+float MPU6050_setKI(float);
+float MPU6050_setDT(float);
+
+
 
 
 
