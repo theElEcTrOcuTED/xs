@@ -140,10 +140,7 @@ void MPU6050_DMP_ResetFIFO(MPU6050_HandleTypeDef *hmpu);
 
 //软件姿态解算部分
 // 配置参数
-#define DT            500
-#define KP            2.0f      // 比例增益
-#define KI            0.005f    // 积分增益
-#define GRAVITY       9.80665f  // m/s²
+
 
 typedef struct {
   float q[4];          // 四元数

@@ -419,6 +419,31 @@ void MPU6050_DMP_FIFO_CHECK(MPU6050_HandleTypeDef *hmpu) {
 
 
 
+float KP = 2.0f;
+float KI = 0.005f;
+float DT = 1.0f/500;
+
+float MPU6050_getKP() {
+	return KP;
+}
+float MPU6050_getKI() {
+	return KI;
+}
+float MPU6050_getDT() {
+	return DT;
+}
+float MPU6050_setKP(float kp) {
+	KP = kp;
+	return KP;
+}
+float MPU6050_setKI(float ki) {
+	KI = ki;
+	return KI;
+}
+float MPU6050_setDT(float dt) {
+	DT = dt;
+	return dt;
+}
 
 
 void init_estimator(AttitudeEstimator* est) {
@@ -441,8 +466,9 @@ void update_attitude(AttitudeEstimator* est,
     gz -= est->gyro_bias[2];
 
     // 加速度计归一化
+	//注意！！注意！！这里的值有的时候应当更改！
     float a_norm = sqrtf(ax*ax + ay*ay + az*az);
-    if(a_norm > 0.1f*GRAVITY && a_norm < 2.0f*GRAVITY) {
+    if(a_norm > 0.1f && a_norm < 2.0f) {
         ax /= a_norm;
         ay /= a_norm;
         az /= a_norm;

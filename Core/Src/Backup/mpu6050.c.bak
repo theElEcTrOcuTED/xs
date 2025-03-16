@@ -420,17 +420,6 @@ void MPU6050_DMP_FIFO_CHECK(MPU6050_HandleTypeDef *hmpu) {
 
 
 
-// 配置参数
-#define DT            500
-#define KP            2.0f      // 比例增益
-#define KI            0.005f    // 积分增益
-#define GRAVITY       9.80665f  // m/s²
-
-typedef struct {
-    float q[4];          // 四元数
-    float inte_err[3];    // 积分误差
-    float gyro_bias[3];   // 陀螺仪零偏
-} AttitudeEstimator;
 
 void init_estimator(AttitudeEstimator* est) {
     est->q[0] = 1.0f;

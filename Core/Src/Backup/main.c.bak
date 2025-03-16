@@ -21,10 +21,10 @@
 #include "i2c.h"
 #include "tim.h"
 #include "gpio.h"
-#include "mpu6050.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "mpu6050.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +45,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+MPU6050_HandleTypeDef MPU6050_hand;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,8 +90,9 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   MX_TIM1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+  ::MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -145,6 +146,16 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
+
+//NVIC中断服务函数
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+  if(htim->Instance==TIM2) {
+    //TIM2 PSC = 63, ARR = 2000, 500Hz，用于触发MPU6050采样和姿态解算
+    MPU6050_Data predata;
+    MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
+    MPU6050_
+  }
+}
 /* USER CODE END 4 */
 
 /**
