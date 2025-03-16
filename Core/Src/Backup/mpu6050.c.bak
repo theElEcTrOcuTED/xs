@@ -419,9 +419,34 @@ void MPU6050_DMP_FIFO_CHECK(MPU6050_HandleTypeDef *hmpu) {
 
 
 
+float KP = 2.0f;
+float KI = 0.005f;
+float DT = 1.0f/500;
+
+float MPU6050_getKP() {
+	return KP;
+}
+float MPU6050_getKI() {
+	return KI;
+}
+float MPU6050_getDT() {
+	return DT;
+}
+float MPU6050_setKP(float kp) {
+	KP = kp;
+	return KP;
+}
+float MPU6050_setKI(float ki) {
+	KI = ki;
+	return KI;
+}
+float MPU6050_setDT(float dt) {
+	DT = dt;
+	return dt;
+}
 
 
-void init_estimator(AttitudeEstimator* est) {
+void MPU6050_init_estimator(AttitudeEstimator* est) {
     est->q[0] = 1.0f;
     est->q[1] = est->q[2] = est->q[3] = 0.0f;
     for(int i=0; i<3; i++) {
@@ -430,7 +455,7 @@ void init_estimator(AttitudeEstimator* est) {
     }
 }
 
-void update_attitude(AttitudeEstimator* est,
+void MPU6050_update_attitude(AttitudeEstimator* est,
                     float ax, float ay, float az,  // 加速度计(m/s²)
                     float gx, float gy, float gz)  // 陀螺仪(rad/s)
 {
@@ -441,8 +466,9 @@ void update_attitude(AttitudeEstimator* est,
     gz -= est->gyro_bias[2];
 
     // 加速度计归一化
+	//注意！！注意！！这里的值有的时候应当更改！
     float a_norm = sqrtf(ax*ax + ay*ay + az*az);
-    if(a_norm > 0.1f*GRAVITY && a_norm < 2.0f*GRAVITY) {
+    if(a_norm > 0.1f && a_norm < 2.0f) {
         ax /= a_norm;
         ay /= a_norm;
         az /= a_norm;
@@ -450,6 +476,13 @@ void update_attitude(AttitudeEstimator* est,
         ax = ay = 0.0f;
         az = 1.0f;  // 异常值处理
     }
+
+
+	if(fabs(a_norm-1) > 0.2f) {
+		KP = 0.5f;  // 动态时降低校正强度
+	} else {
+		KP = 2.0f;  // 静态时增强校正
+	}
 
     /* 2. 四元数预测（陀螺仪积分） */
     float q0=est->q[0], q1=est->q[1], q2=est->q[2], q3=est->q[3];
@@ -495,8 +528,36 @@ void update_attitude(AttitudeEstimator* est,
 }
 
 /* 欧拉角转换函数 */
-void get_euler_angles(const AttitudeEstimator* est,
-                     float* roll, float* pitch, float* yaw)
+/**
+ * 警告：使用欧拉角转换函数时，XYZ轴必须按照指定的方向：
+ * 陀螺仪旋转方向：
+* 旋转方向：
+
+*+X轴角速度（gx）：设备绕右侧（X轴）顺时针旋转时为正（右手法则）
+
+*+Y轴角速度（gy）：设备绕前方（Y轴）抬头（Pitch↑）时为正
+
+*+Z轴角速度（gz）：设备绕上方（Z轴）右偏（Yaw→）时为正
+
+*轴	方向定义	欧拉角对应旋转轴
+*
+*X	设备右侧（Right）	横滚角（Roll）绕X轴
+*
+*Y	设备前方（Front）	俯仰角（Pitch）绕Y轴
+*
+*Z	设备上方（Up）	偏航角（Yaw）绕Z轴
+
+ *加速度计：
+*静止水平放置时：
+
+*+Z轴：垂直向上（检测到+1g）
+
+*+X轴：指向设备右侧
+
+*+Y轴：指向设备前方
+ */
+void MPU6050_get_euler_angles(const AttitudeEstimator* est,
+                              float* roll, float* pitch, float* yaw)
 {
     const float* q = est->q;
 

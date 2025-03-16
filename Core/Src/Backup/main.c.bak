@@ -45,7 +45,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-MPU6050_HandleTypeDef MPU6050_hand;
+MPU6050_HandleTypeDef MPU6050_hand; //MPU6050 句柄结构体
+AttitudeEstimator attitudeEstimator;//MPU6050 姿态解算结构体
+EulerAngle eulerAngle;//MPU6050 当前欧拉角
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -92,7 +95,9 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  ::MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
+  MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
+
+  MPU6050_init_estimator(&attitudeEstimator);//MPU6050 软件姿态解算初始化
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -153,7 +158,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     //TIM2 PSC = 63, ARR = 2000, 500Hz，用于触发MPU6050采样和姿态解算
     MPU6050_Data predata;
     MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
-    MPU6050_
+
+    MPU6050_update_attitude(&attitudeEstimator,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
+
+    //欧拉角解算
+    MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
+    //TIM1 advanced - control timer
   }
 }
 /* USER CODE END 4 */
