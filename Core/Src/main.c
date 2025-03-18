@@ -22,6 +22,7 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "tb6612.h"
@@ -116,6 +117,7 @@ int main(void)
 
   controlTarget = eulerAngle.pitch;
 
+
   /*
   Motor_Handle.in1_pin = GPIO_PIN_14;
   Motor_Handle.in2_pin = GPIO_PIN_13;
@@ -124,8 +126,12 @@ int main(void)
   Motor_Handle.pwm_ch = TIM_CHANNEL_1;
   Motor_Handle.pwm_tim = &htim1;*/
   Motor_Init(&Motor_Handle,&htim1,TIM_CHANNEL_1,GPIOB,GPIO_PIN_14,GPIOB,GPIO_PIN_13);
-  TB6612_Init(&TB6612_Handle,&Motor_Handle,NULL,NULL,NULL);
+  //__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 20);
+  TB6612_Init(&TB6612_Handle,&Motor_Handle,NULL,NULL,0);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 70);
   TB6612_Enable(&TB6612_Handle);
+  HAL_TIM_Base_Start_IT(&htim2);
+ // Motor_SetSpeed(&TB6612_Handle.motorA, 20);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -189,9 +195,12 @@ double last_error;
 
 
 //NVIC中断服务函数
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+
   if(htim->Instance==TIM2) {
     //TIM2 PSC = 63, ARR = 2000, 500Hz，用于触发MPU6050采样和姿态解算
+
     MPU6050_Data predata;
     MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
 
@@ -199,6 +208,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
     //欧拉角解算
     MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
+
     //TIM1 advanced - control timer:
     //PSC = 63 -->> 1MHz,  ARR = 100 -> 10KHz PWM波，默认Pulse = 75, 上计数模式，PWM Mode1,占空比75%
 
@@ -207,7 +217,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     double error = eulerAngle.pitch - controlTarget;            //当前误差
     double dif = (error - last_error)/dt;       //微分量
     double output = Kp*error + Ki*inte_error + Kd*dif;//PID控制量计算
-    output /= 80;
+    output /= 200;
     if(output > 1.0) {
       output = 1.0;
     }
@@ -215,10 +225,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
       output = -1.0;
     }
     inte_error += error*dt;
+
     //pitch以抬头为正，设风扇正向下吹，则pitch升高时风扇转速应降低，即CCR值应降低
 
     //更新风扇转速
-    Motor_SetSpeed(&TB6612_Handle.motorA, output);
+    Motor_SetSpeed(&TB6612_Handle.motorA, output*100);
+    //__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 20);
   }
 }
 /* USER CODE END 4 */

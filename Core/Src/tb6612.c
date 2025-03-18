@@ -36,6 +36,7 @@ void Motor_SetSpeed(Motor_HandleTypeDef* motor, float speed)
     // 限制速度范围
     speed = (speed > 100) ? 100 : (speed < -100) ? -100 : speed;
 
+
     if(speed > 0) {
         Motor_SetDirection(motor, MOTOR_FORWARD);
     } else if(speed < 0) {
@@ -45,7 +46,6 @@ void Motor_SetSpeed(Motor_HandleTypeDef* motor, float speed)
         Motor_Stop(motor);
         return;
     }
-
     // 计算PWM占空比
     uint32_t arr = motor->pwm_tim->Instance->ARR;
     __HAL_TIM_SET_COMPARE(motor->pwm_tim, motor->pwm_ch, (int)(speed * arr) / 100);
@@ -53,23 +53,25 @@ void Motor_SetSpeed(Motor_HandleTypeDef* motor, float speed)
 
 void Motor_SetDirection(Motor_HandleTypeDef* motor, Motor_Direction dir)
 {
-    switch(dir) {
-    case MOTOR_FORWARD:
-        HAL_GPIO_WritePin(motor->in1_port, motor->in1_pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(motor->in2_port, motor->in2_pin, GPIO_PIN_RESET);
-        break;
-    case MOTOR_BACKWARD:
-        HAL_GPIO_WritePin(motor->in1_port, motor->in1_pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(motor->in2_port, motor->in2_pin, GPIO_PIN_SET);
-        break;
-    case MOTOR_BRAKE:
-        HAL_GPIO_WritePin(motor->in1_port, motor->in1_pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(motor->in2_port, motor->in2_pin, GPIO_PIN_SET);
-        break;
-    case MOTOR_STOP:
-        HAL_GPIO_WritePin(motor->in1_port, motor->in1_pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(motor->in2_port, motor->in2_pin, GPIO_PIN_RESET);
-        break;
+    if(motor) {
+        switch(dir) {
+            case MOTOR_FORWARD:
+                HAL_GPIO_WritePin(motor->in1_port, motor->in1_pin, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(motor->in2_port, motor->in2_pin, GPIO_PIN_RESET);
+            break;
+            case MOTOR_BACKWARD:
+                HAL_GPIO_WritePin(motor->in1_port, motor->in1_pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(motor->in2_port, motor->in2_pin, GPIO_PIN_SET);
+            break;
+            case MOTOR_BRAKE:
+                HAL_GPIO_WritePin(motor->in1_port, motor->in1_pin, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(motor->in2_port, motor->in2_pin, GPIO_PIN_SET);
+            break;
+            case MOTOR_STOP:
+                HAL_GPIO_WritePin(motor->in1_port, motor->in1_pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(motor->in2_port, motor->in2_pin, GPIO_PIN_RESET);
+            break;
+        }
     }
 }
 
@@ -93,30 +95,39 @@ void TB6612_Init(TB6612_HandleTypeDef* driver,
                 uint16_t stby_pin)
 {
     // 复制电机配置
-    driver->motorA = *motorA;
-    driver->motorB = *motorB;
+    if(motorA) {
+        driver->motorA = *motorA;
+    }
+    if(motorB) {
+        driver->motorB = *motorB;
+    }
     driver->stby_port = stby_port;
     driver->stby_pin = stby_pin;
-
-    // 初始化STBY引脚
-    GPIO_InitTypeDef gpio_init = {
-        .Pin = stby_pin,
-        .Mode = GPIO_MODE_OUTPUT_PP,
-        .Pull = GPIO_NOPULL,
-        .Speed = GPIO_SPEED_FREQ_HIGH
-    };
-    HAL_GPIO_Init(stby_port, &gpio_init);
-    
+    if(stby_port != NULL) {
+        // 初始化STBY引脚
+        GPIO_InitTypeDef gpio_init = {
+            .Pin = stby_pin,
+            .Mode = GPIO_MODE_OUTPUT_PP,
+            .Pull = GPIO_NOPULL,
+            .Speed = GPIO_SPEED_FREQ_HIGH
+        };
+        HAL_GPIO_Init(stby_port, &gpio_init);
+    }
     // 默认禁用驱动板
     TB6612_Disable(driver);
 }
 
 void TB6612_Enable(TB6612_HandleTypeDef* driver)
 {
-    HAL_GPIO_WritePin(driver->stby_port, driver->stby_pin, GPIO_PIN_SET);
+    if(driver->stby_port != NULL) {
+        HAL_GPIO_WritePin(driver->stby_port, driver->stby_pin, GPIO_PIN_SET);
+    }
 }
 
 void TB6612_Disable(TB6612_HandleTypeDef* driver)
 {
-    HAL_GPIO_WritePin(driver->stby_port, driver->stby_pin, GPIO_PIN_RESET);
+    if(driver->stby_port != NULL) {
+        HAL_GPIO_WritePin(driver->stby_port, driver->stby_pin, GPIO_PIN_RESET);
+    }
+
 }

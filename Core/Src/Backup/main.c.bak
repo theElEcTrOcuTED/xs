@@ -20,10 +20,12 @@
 #include "main.h"
 #include "i2c.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "tb6612.h"
 #include "mpu6050.h"
 /* USER CODE END Includes */
 
@@ -48,6 +50,8 @@
 MPU6050_HandleTypeDef MPU6050_hand; //MPU6050 句柄结构体
 AttitudeEstimator attitudeEstimator;//MPU6050 姿态解算结构体
 EulerAngle eulerAngle;//MPU6050 当前欧拉角
+Motor_HandleTypeDef Motor_Handle;
+TB6612_HandleTypeDef TB6612_Handle;
 double controlTarget;//控制目标
 /* USER CODE END PV */
 
@@ -94,6 +98,9 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
+  MX_USART2_UART_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
 
@@ -109,6 +116,21 @@ int main(void)
   MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
 
   controlTarget = eulerAngle.pitch;
+  HAL_TIM_Base_Start_IT(&htim2);
+
+  /*
+  Motor_Handle.in1_pin = GPIO_PIN_14;
+  Motor_Handle.in2_pin = GPIO_PIN_13;
+  Motor_Handle.in1_port = GPIOB;
+  Motor_Handle.in2_port = GPIOB;
+  Motor_Handle.pwm_ch = TIM_CHANNEL_1;
+  Motor_Handle.pwm_tim = &htim1;*/
+  Motor_Init(&Motor_Handle,&htim1,TIM_CHANNEL_1,GPIOB,GPIO_PIN_14,GPIOB,GPIO_PIN_13);
+  //__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 20);
+  TB6612_Init(&TB6612_Handle,&Motor_Handle,NULL,NULL,0);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 70);
+  TB6612_Enable(&TB6612_Handle);
+ // Motor_SetSpeed(&TB6612_Handle.motorA, 20);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -172,9 +194,12 @@ double last_error;
 
 
 //NVIC中断服务函数
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+
   if(htim->Instance==TIM2) {
     //TIM2 PSC = 63, ARR = 2000, 500Hz，用于触发MPU6050采样和姿态解算
+
     MPU6050_Data predata;
     MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
 
@@ -182,6 +207,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
     //欧拉角解算
     MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
+
     //TIM1 advanced - control timer:
     //PSC = 63 -->> 1MHz,  ARR = 100 -> 10KHz PWM波，默认Pulse = 75, 上计数模式，PWM Mode1,占空比75%
 
@@ -198,10 +224,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
       output = -1.0;
     }
     inte_error += error*dt;
+
     //pitch以抬头为正，设风扇正向下吹，则pitch升高时风扇转速应降低，即CCR值应降低
 
     //更新风扇转速
-    __HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1,(int)(output*100));
+    Motor_SetSpeed(&TB6612_Handle.motorA, output);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 20);
   }
 }
 /* USER CODE END 4 */
