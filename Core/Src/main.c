@@ -22,9 +22,9 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "tb6612.h"
 #include "mpu6050.h"
 /* USER CODE END Includes */
 
@@ -49,6 +49,8 @@
 MPU6050_HandleTypeDef MPU6050_hand; //MPU6050 句柄结构体
 AttitudeEstimator attitudeEstimator;//MPU6050 姿态解算结构体
 EulerAngle eulerAngle;//MPU6050 当前欧拉角
+Motor_HandleTypeDef Motor_Handle;
+TB6612_HandleTypeDef TB6612_Handle;
 double controlTarget;//控制目标
 /* USER CODE END PV */
 
@@ -113,6 +115,17 @@ int main(void)
   MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
 
   controlTarget = eulerAngle.pitch;
+
+  /*
+  Motor_Handle.in1_pin = GPIO_PIN_14;
+  Motor_Handle.in2_pin = GPIO_PIN_13;
+  Motor_Handle.in1_port = GPIOB;
+  Motor_Handle.in2_port = GPIOB;
+  Motor_Handle.pwm_ch = TIM_CHANNEL_1;
+  Motor_Handle.pwm_tim = &htim1;*/
+  Motor_Init(&Motor_Handle,&htim1,TIM_CHANNEL_1,GPIOB,GPIO_PIN_14,GPIOB,GPIO_PIN_13);
+  TB6612_Init(&TB6612_Handle,&Motor_Handle,NULL,NULL,NULL);
+  TB6612_Enable(&TB6612_Handle);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -205,7 +218,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     //pitch以抬头为正，设风扇正向下吹，则pitch升高时风扇转速应降低，即CCR值应降低
 
     //更新风扇转速
-    __HAL_TIM_SetCompare(&htim1,TIM_CHANNEL_1,(int)(output*100));
+    Motor_SetSpeed(&TB6612_Handle.motorA, output);
   }
 }
 /* USER CODE END 4 */
