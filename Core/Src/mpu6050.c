@@ -4,6 +4,7 @@
 
 #include "mpu6050.h"
 #include <math.h>
+#include <string.h>
 
 static const unsigned char dmpMemory[1929] = {
 	/* bank # 0 */
@@ -604,7 +605,8 @@ static inline float high_pass_filter(float input, float* state, float alpha) {
     return filtered;
 }
 
-void MPU6050_update_attitude(AttitudeEstimator* est,
+EulerAngle gyroAngle;
+void MPU6050_update_attitude(AttitudeEstimator* est,EulerAngle* euler_angle,
                     float ax, float ay, float az,
                     float gx, float gy, float gz)
 {
@@ -615,44 +617,41 @@ void MPU6050_update_attitude(AttitudeEstimator* est,
     az = low_pass_filter(az, &est->acc_lpf[2], ALPHA_LPF);
 
     // 陀螺仪高通滤波（去零偏）
-    gx = high_pass_filter(gx, &est->gyro_lpf[0], ALPHA_HPF);
-    gy = high_pass_filter(gy, &est->gyro_lpf[1], ALPHA_HPF);
-    gz = high_pass_filter(gz, &est->gyro_lpf[2], ALPHA_HPF);
+
 
     /*----- 2. 加速度计姿态估计 -----*/
     // 归一化加速度计
     float norm = 1.0f / sqrtf(ax*ax + ay*ay + az*az);
-    ax *= norm; ay *= norm; az *= norm;
+	float pitch_acc = -1*atan(ax/sqrtf(ay*ay+az*az));
+	float roll_acc = atan(ay/az);
+   // ax *= norm; ay *= norm; az *= norm;
 
     // 计算俯仰角和横滚角（加速度计基准）
-    float pitch_acc = asinf(ax);
-    float roll_acc  = atan2f(-ay, -az);
+    //float pitch_acc = asinf(ax);
+    //float roll_acc  = atan2f(-ay, -az);
 
     /*----- 3. 陀螺仪姿态积分 -----*/
-    // 当前四元数状态
-    float q0 = est->q[0], q1 = est->q[1], q2 = est->q[2], q3 = est->q[3];
 
-    // 四元数微分方程
-    float dq0 = 0.5f * (-q1*gx - q2*gy - q3*gz);
-    float dq1 = 0.5f * ( q0*gx + q2*gz - q3*gy);
-    float dq2 = 0.5f * ( q0*gy - q1*gz + q3*gx);
-    float dq3 = 0.5f * ( q0*gz + q1*gy - q2*gx);
+	// 积分预测
+	float pitch = gyroAngle.pitch+gy*DT;
+	float yaw = gyroAngle.yaw+gz*DT;
+	float roll = gyroAngle.roll+gx*DT;
 
-    // 积分预测
-    q0 += dq0 * DT;
-    q1 += dq1 * DT;
-    q2 += dq2 * DT;
-    q3 += dq3 * DT;
+	gyroAngle.pitch = high_pass_filter(pitch, &gyroAngle.pitch, ALPHA_HPF);
+	gyroAngle.yaw = high_pass_filter(yaw, &gyroAngle.yaw, ALPHA_HPF);
+	gyroAngle.roll = high_pass_filter(roll, &gyroAngle.roll, ALPHA_HPF);
+
 
     /*----- 4. 互补滤波融合 -----*/
-    // 四元数转欧拉角
-    float roll_gyro  = atan2f(2*(q0*q1 + q2*q3), 1 - 2*(q1*q1 + q2*q2));
-    float pitch_gyro = asinf(2*(q0*q2 - q3*q1));
+
 
     // 角度级互补滤波
-    float roll_comp  = BETA_COMP*roll_gyro  + (1-BETA_COMP)*roll_acc;
-    float pitch_comp = BETA_COMP*pitch_gyro + (1-BETA_COMP)*pitch_acc;
-
+    float roll_comp  = BETA_COMP*gyroAngle.roll  + (1-BETA_COMP)*roll_acc;
+    float pitch_comp = BETA_COMP*gyroAngle.pitch + (1-BETA_COMP)*pitch_acc;
+	euler_angle->roll = roll_comp* 57.2957795f;
+	euler_angle->pitch = pitch_comp* 57.2957795f;
+	euler_angle->yaw = gyroAngle.yaw* 57.2957795f;
+/*
     // 将修正后的角度转换为四元数
     float cy = cosf(roll_comp * 0.5f);
     float sy = sinf(roll_comp * 0.5f);
@@ -670,7 +669,7 @@ void MPU6050_update_attitude(AttitudeEstimator* est,
     est->q[0] *= norm;
     est->q[1] *= norm;
     est->q[2] *= norm;
-    est->q[3] *= norm;
+    est->q[3] *= norm;*/
 }
 
 /*#include <math.h>
@@ -859,3 +858,204 @@ void INS_GetEulerAngles(const INS_State* state, float* roll, float* pitch, float
     *yaw   = atan2f(2.0f*(state->q[0]*state->q[3] + state->q[1]*state->q[2]),
                     1.0f - 2.0f*(state->q[2]*state->q[2] + state->q[3]*state->q[3]));
 }*/
+
+
+
+
+
+
+
+
+
+#define DT              0.01f    // 采样周期(s)
+#define Q_ANGLE         0.001f   // 过程噪声-角度
+#define Q_GYRO_BIAS    0.003f   // 过程噪声-陀螺零偏
+#define R_ACCEL         0.5f     // 测量噪声-加速度计
+
+
+
+// 角度约束到[-π, π]
+static inline float angle_wrap(float a) {
+    while(a > M_PI) a -= 2*M_PI;
+    while(a < -M_PI) a += 2*M_PI;
+    return a;
+}
+
+// 初始化卡尔曼滤波器
+void kalman_init(KalmanFilter* kf) {
+    memset(kf, 0, sizeof(KalmanFilter));
+    kf->x[0] = kf->x[1] = 0.0f;      // 初始角度
+    kf->x[2] = kf->x[3] = 0.0f;      // 初始零偏
+
+    // 初始协方差矩阵
+    for(int i=0; i<4; i++)
+        kf->P[i][i] = 1.0f;          // 初始不确定度
+}
+
+// 卡尔曼预测步骤
+void kalman_predict(KalmanFilter* kf, float gx, float gy) {
+    /* 状态转移矩阵 F */
+    float F[4][4] = {
+        {1, 0, -DT, 0},
+        {0, 1, 0, -DT},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1}
+    };
+
+    /* 过程噪声矩阵 Q */
+    float Q[4][4] = {
+        {Q_ANGLE*DT*DT, 0, 0, 0},
+        {0, Q_ANGLE*DT*DT, 0, 0},
+        {0, 0, Q_GYRO_BIAS*DT, 0},
+        {0, 0, 0, Q_GYRO_BIAS*DT}
+    };
+
+    /* 状态预测 */
+    float x_pred[4] = {
+        kf->x[0] + (gx - kf->x[2]) * DT,
+        kf->x[1] + (gy - kf->x[3]) * DT,
+        kf->x[2],
+        kf->x[3]
+    };
+
+    /* 协方差预测 P = F*P*F^T + Q */
+    float FP[4][4];
+    for(int i=0; i<4; i++) {
+        for(int j=0; j<4; j++) {
+            FP[i][j] = 0.0f;
+            for(int k=0; k<4; k++)
+                FP[i][j] += F[i][k] * kf->P[k][j];
+        }
+    }
+    for(int i=0; i<4; i++) {
+        for(int j=0; j<4; j++) {
+            kf->P[i][j] = 0.0f;
+            for(int k=0; k<4; k++)
+                kf->P[i][j] += FP[i][k] * F[j][k]; // F^T转置乘法
+            kf->P[i][j] += Q[i][j];
+        }
+    }
+
+    // 更新状态
+    memcpy(kf->x, x_pred, sizeof(x_pred));
+}
+
+// 卡尔曼更新步骤
+void kalman_update(KalmanFilter* kf, float ax, float ay, float az) {
+    /* 测量方程 z = h(x) + v */
+    float roll_m = atan2f(ay, az);
+    float pitch_m = atan2f(-ax, sqrtf(ay*ay + az*az));
+
+    /* 雅可比矩阵 H (2x4) */
+    float H[2][4] = {
+        {1, 0, 0, 0},  // roll测量对状态的导数
+        {0, 1, 0, 0}   // pitch测量对状态的导数
+    };
+
+    /* 测量噪声矩阵 R (2x2) */
+    float R[2][2] = {
+        {R_ACCEL, 0},
+        {0, R_ACCEL}
+    };
+
+    /* 计算卡尔曼增益 K = P*H^T*(H*P*H^T + R)^-1 */
+    float HPHT[2][2];
+    for(int i=0; i<2; i++) {
+        for(int j=0; j<2; j++) {
+            HPHT[i][j] = 0.0f;
+            for(int k=0; k<4; k++)
+                HPHT[i][j] += H[i][k] * kf->P[k][j];
+        }
+    }
+    HPHT[0][0] += R[0][0];
+    HPHT[1][1] += R[1][1];
+
+    float det = HPHT[0][0]*HPHT[1][1] - HPHT[0][1]*HPHT[1][0];
+    if(fabs(det) < 1e-6) return; // 避免奇异矩阵
+
+    float invHPHT[2][2] = {
+        { HPHT[1][1]/det, -HPHT[0][1]/det},
+        {-HPHT[1][0]/det,  HPHT[0][0]/det}
+    };
+
+    float K[4][2];
+    for(int i=0; i<4; i++) {
+        for(int j=0; j<2; j++) {
+            K[i][j] = 0.0f;
+            for(int k=0; k<2; k++)
+                K[i][j] += kf->P[i][k] * H[j][k];
+        }
+    }
+    for(int i=0; i<4; i++) {
+        for(int j=0; j<2; j++) {
+            K[i][j] *= invHPHT[j][j];
+        }
+    }
+
+    /* 状态更新 */
+    float y[2] = {
+        angle_wrap(roll_m - kf->x[0]),
+        angle_wrap(pitch_m - kf->x[1])
+    };
+
+    for(int i=0; i<4; i++) {
+        kf->x[i] += K[i][0]*y[0] + K[i][1]*y[1];
+        kf->x[i] = angle_wrap(kf->x[i]);
+    }
+
+    /* 协方差更新 P = (I - K*H)*P */
+    float KH[4][4];
+    for(int i=0; i<4; i++) {
+        for(int j=0; j<4; j++) {
+            KH[i][j] = K[i][0]*H[0][j] + K[i][1]*H[1][j];
+        }
+    }
+    for(int i=0; i<4; i++) {
+        for(int j=0; j<4; j++) {
+            kf->P[i][j] -= KH[i][0]*kf->P[0][j] + KH[i][1]*kf->P[1][j];
+        }
+    }
+}
+
+// 获取当前姿态
+void get_attitude(const KalmanFilter* kf, float* roll, float* pitch) {
+    *roll = kf->x[0] * 57.2957795f; // 弧度转角度
+    *pitch = kf->x[1] * 57.2957795f;
+}
+KalmanFilter kf;
+EulerAngle angle;
+
+void KalmanInit() {
+	kalman_init(&kf);
+}
+
+EulerAngle* tick_and_get_attitude(float gx,float gy,float gz,float ax,float ay,float az) {
+	kalman_predict(&kf,gx,gy);
+	kalman_update(&kf,ax,ay,az);
+	get_attitude(&kf, &angle.roll, &angle.pitch);
+	angle.roll += gz*DT;
+	return &angle;
+}
+
+/******************** 使用示例 ********************
+KalmanFilter kf;
+kalman_init(&kf);
+
+while(1) {
+    // 读取传感器数据（单位：rad/s和m/s²）
+    float gx, gy, gz; // 陀螺仪
+    float ax, ay, az; // 加速度计
+
+    // 预测步骤（使用陀螺仪）
+    kalman_predict(&kf, gx, gy);
+
+    // 更新步骤（使用加速度计）
+    kalman_update(&kf, ax, ay, az);
+
+    // 获取当前姿态
+    float roll, pitch;
+    get_attitude(&kf, &roll, &pitch);
+
+    delay(DT*1000);
+}
+**************************************************/

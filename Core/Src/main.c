@@ -105,19 +105,21 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
+  //MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
 
 
 
   //等待MPU6050初始化
   HAL_Delay(150);
+  MPU6050_DMP_Init(&MPU6050_hand);
+  HAL_Delay(1500);
   //姿态角控制目标初始化
-  MPU6050_Data predata;
-  MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
-  MPU6050_init_estimator(&attitudeEstimator,&predata);//MPU6050 软件姿态解算初始化
-  MPU6050_update_attitude(&attitudeEstimator,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
+  //MPU6050_Data predata;
+ // MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
+  //MPU6050_init_estimator(&attitudeEstimator,&predata);//MPU6050 软件姿态解算初始化
+  //MPU6050_update_attitude(&attitudeEstimator,&eulerAngle,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
   //欧拉角解算
-  MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
+  //MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
 
   controlTarget = eulerAngle.pitch;
 
@@ -205,13 +207,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
   if(htim->Instance==TIM2) {
     //TIM2 PSC = 63, ARR = 2000, 500Hz，用于触发MPU6050采样和姿态解算
 
+    DMP_Quaternion q;
+    DMP_Euler_Angles e;
     MPU6050_Data predata;
     MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
-
-    MPU6050_update_attitude(&attitudeEstimator,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
-
+    MPU6050_DMP_GetData(&MPU6050_hand,&q,&e);
+    eulerAngle.pitch = e.pitch;
+    eulerAngle.roll = e.roll;
+    eulerAngle.yaw = e.yaw;
+    //MPU6050_update_attitude(&attitudeEstimator,&eulerAngle,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
+    //eulerAngle = *tick_and_get_attitude(predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z,predata.Accel_X,predata.Accel_Y,predata.Accel_Z);
     //欧拉角解算
-    MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
+    //MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
 
     //TIM1 advanced - control timer:
     //PSC = 63 -->> 1MHz,  ARR = 100 -> 10KHz PWM波，默认Pulse = 75, 上计数模式，PWM Mode1,占空比75%
@@ -233,6 +240,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     //pitch以抬头为正，设风扇正向下吹，则pitch升高时风扇转速应降低，即CCR值应降低
     char message[70] = "pitch=";
     char pitchStr[7];
+    char rollStr[7];
+    char yawStr[7];
     char axStr[7];
     char ayStr[7];
     char azStr[7];
@@ -240,6 +249,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     char gyroyStr[7];
     char gyrozStr[7];
     sprintf(pitchStr,"%.2lf",eulerAngle.pitch);
+    sprintf(rollStr,"%.2lf",eulerAngle.roll);
+    sprintf(yawStr,"%.2lf",eulerAngle.yaw);
     sprintf(axStr,"%.2lf",predata.Accel_X);
     sprintf(ayStr,"%.2lf",predata.Accel_Y);
     sprintf(azStr,"%.2lf",predata.Accel_Z);
@@ -247,6 +258,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     sprintf(gyroyStr,"%.2lf",predata.Gyro_Y);
     sprintf(gyrozStr,"%.2lf",predata.Gyro_Z);
     strcat(message,pitchStr);
+    //strcat(message,"\nyaw=");
+    //strcat(message,yawStr);
+    //strcat(message,"\nroll=");
+   // strcat(message,rollStr);
+    /*
     strcat(message,"\nax=");
     strcat(message,axStr);
     strcat(message,"\nay=");
@@ -258,7 +274,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     strcat(message,"\ngy=");
     strcat(message,gyroyStr);
     strcat(message,"\ngz=");
-    strcat(message,gyrozStr);
+    strcat(message,gyrozStr);*/
     strcat(message,"\n\n");
     HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message), 100);
 

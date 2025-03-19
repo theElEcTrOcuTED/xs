@@ -142,7 +142,7 @@ void MPU6050_DMP_ResetFIFO(MPU6050_HandleTypeDef *hmpu);
 // 配置参数
 
 #define ALPHA_LPF       0.15f     // 加速度计低通滤波系数
-#define ALPHA_HPF       0.95f     // 陀螺仪高通滤波系数
+#define ALPHA_HPF       0.98f     // 陀螺仪高通滤波系数
 #define BETA_COMP       0.1f      // 互补滤波系数
 typedef struct {
   float q[4];          // 四元数
@@ -158,8 +158,8 @@ typedef struct {
   float yaw;
 } EulerAngle;
 void MPU6050_init_estimator(AttitudeEstimator* est,MPU6050_Data *data);
-void MPU6050_update_attitude(AttitudeEstimator* est,
-                    float ax, float ay, float az,  // 加速度计(m/s²)
+void MPU6050_update_attitude(AttitudeEstimator* est,EulerAngle* euler_angle,
+                    float ax, float ay, float az,
                     float gx, float gy, float gz);
 void MPU6050_get_euler_angles(const AttitudeEstimator* est,
                      float* roll, float* pitch, float* yaw);
@@ -175,7 +175,14 @@ float MPU6050_setDT(float);
 
 
 
+typedef struct {
+  /* 状态向量 [roll, pitch, gyro_bias_x, gyro_bias_y] */
+  float x[4];
 
+  /* 协方差矩阵 (4x4) */
+  float P[4][4];
+} KalmanFilter;
+EulerAngle* tick_and_get_attitude(float gx,float gy,float gz,float ax,float ay,float az);
 
 
 
