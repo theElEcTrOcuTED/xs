@@ -141,11 +141,15 @@ void MPU6050_DMP_ResetFIFO(MPU6050_HandleTypeDef *hmpu);
 //软件姿态解算部分
 // 配置参数
 
-
+#define ALPHA_LPF       0.15f     // 加速度计低通滤波系数
+#define ALPHA_HPF       0.95f     // 陀螺仪高通滤波系数
+#define BETA_COMP       0.1f      // 互补滤波系数
 typedef struct {
   float q[4];          // 四元数
   float inte_err[3];    // 积分误差
   float gyro_bias[3];   // 陀螺仪零偏
+  float gyro_lpf[3];   // 陀螺仪低通滤波状态
+  float acc_lpf[3];    // 加速度计低通滤波状态
 } AttitudeEstimator;
 
 typedef struct {
@@ -153,7 +157,7 @@ typedef struct {
   float roll;
   float yaw;
 } EulerAngle;
-void MPU6050_init_estimator(AttitudeEstimator* est);
+void MPU6050_init_estimator(AttitudeEstimator* est,MPU6050_Data *data);
 void MPU6050_update_attitude(AttitudeEstimator* est,
                     float ax, float ay, float az,  // 加速度计(m/s²)
                     float gx, float gy, float gz);

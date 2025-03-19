@@ -419,8 +419,8 @@ void MPU6050_DMP_FIFO_CHECK(MPU6050_HandleTypeDef *hmpu) {
 
 
 
-float KP = 2.0f;
-float KI = 0.005f;
+float KP = 2.5f;
+float KI = 0.01f;
 float DT = 1.0f/500;
 
 float MPU6050_getKP() {
@@ -446,88 +446,94 @@ float MPU6050_setDT(float dt) {
 }
 
 
-void MPU6050_init_estimator(AttitudeEstimator* est) {
+void MPU6050_init_estimator(AttitudeEstimator* est,MPU6050_Data *data) {
     est->q[0] = 1.0f;
     est->q[1] = est->q[2] = est->q[3] = 0.0f;
     for(int i=0; i<3; i++) {
         est->inte_err[i] = 0.0f;
         est->gyro_bias[i] = 0.0f;
     }
+	est->gyro_bias[0] = data->Gyro_X;
+	est->gyro_bias[1] = data->Gyro_Y;
+	est->gyro_bias[2] = data->Gyro_Z;
 }
-
+/*
 void MPU6050_update_attitude(AttitudeEstimator* est,
                     float ax, float ay, float az,  // 加速度计(m/s²)
                     float gx, float gy, float gz)  // 陀螺仪(rad/s)
 {
-    /* 1. 传感器预处理 */
-    // 去除陀螺仪零偏
-    gx -= est->gyro_bias[0];
-    gy -= est->gyro_bias[1];
-    gz -= est->gyro_bias[2];
-
-    // 加速度计归一化
-	//注意！！注意！！这里的值有的时候应当更改！
-    float a_norm = sqrtf(ax*ax + ay*ay + az*az);
-    if(a_norm > 0.1f && a_norm < 2.0f) {
-        ax /= a_norm;
-        ay /= a_norm;
-        az /= a_norm;
-    } else {
-        ax = ay = 0.0f;
-        az = 1.0f;  // 异常值处理
-    }
 
 
-	if(fabs(a_norm-1) > 0.2f) {
-		KP = 0.5f;  // 动态时降低校正强度
+	/*--- 阶段1：传感器预处理 ---
+	// 去除陀螺仪零偏
+	gx = gx - est->gyro_bias[0];
+	gy = gy - est->gyro_bias[1];
+	gz = gz - est->gyro_bias[2];
+
+	// 加速度计归一化（带异常检测）
+	float a_norm = sqrtf(ax*ax + ay*ay + az*az);
+	int acc_valid = (a_norm > 0.2f) && (a_norm < 1.8f);
+	if(acc_valid) {
+		ax /= a_norm;
+		ay /= a_norm;
+		az /= a_norm;
 	} else {
-		KP = 2.0f;  // 静态时增强校正
+		ax = ay = 0.0f;
+		az = 1.0f; // 失效保护
 	}
 
-    /* 2. 四元数预测（陀螺仪积分） */
-    float q0=est->q[0], q1=est->q[1], q2=est->q[2], q3=est->q[3];
+	/*--- 阶段2：基于当前姿态的状态预测 ---
+	// 当前四元数状态
+	float q0 = est->q[0], q1 = est->q[1], q2 = est->q[2], q3 = est->q[3];
 
-    // 四元数微分方程
-    float dq0 = 0.5f*(-q1*gx - q2*gy - q3*gz);
-    float dq1 = 0.5f*( q0*gx + q2*gz - q3*gy);
-    float dq2 = 0.5f*( q0*gy - q1*gz + q3*gx);
-    float dq3 = 0.5f*( q0*gz + q1*gy - q2*gx);
+	/*--- 阶段3：加速度计校正 ---
+	// 计算当前姿态下的重力估计
+	float gx_est = 2.0f*(q1*q3 - q0*q2);
+	float gy_est = 2.0f*(q0*q1 + q2*q3);
+	float gz_est = q0*q0 - q1*q1 - q2*q2 + q3*q3;
 
-    // 前向欧拉积分
-    q0 += dq0 * DT;
-    q1 += dq1 * DT;
-    q2 += dq2 * DT;
-    q3 += dq3 * DT;
+	// 误差计算（加速度计测量与估计的叉乘）
+	float err_x = ay*gz_est - az*gy_est;
+	float err_y = az*gx_est - ax*gz_est;
+	float err_z = ax*gy_est - ay*gx_est;
 
-    /* 3. 加速度计校正 */
-    // 计算重力估计向量
-    float gx_est = 2.0f*(q1*q3 - q0*q2);
-    float gy_est = 2.0f*(q0*q1 + q2*q3);
-    float gz_est = q0*q0 - q1*q1 - q2*q2 + q3*q3;
+	// PI补偿控制器
+	est->inte_err[0] += err_x * KI * DT;
+	est->inte_err[1] += err_y * KI * DT;
+	est->inte_err[2] += err_z * KI * DT;
 
-    // 计算误差向量（叉乘）
-    float err_x = ay*gz_est - az*gy_est;
-    float err_y = az*gx_est - ax*gz_est;
-    float err_z = ax*gy_est - ay*gx_est;
+	// 调整陀螺仪读数（前馈补偿）
+	gx += KP*err_x + est->inte_err[0];
+	gy += KP*err_y + est->inte_err[1];
+	gz += KP*err_z + est->inte_err[2];
 
-    // PI补偿
-    est->inte_err[0] += err_x * KI * DT;
-    est->inte_err[1] += err_y * KI * DT;
-    est->inte_err[2] += err_z * KI * DT;
+	/*--- 阶段4：四元数状态更新 ---
+	// 四元数微分方程（使用补偿后的陀螺仪数据）
+	float dq0 = 0.5f*(-q1*gx - q2*gy - q3*gz);
+	float dq1 = 0.5f*( q0*gx + q2*gz - q3*gy);
+	float dq2 = 0.5f*( q0*gy - q1*gz + q3*gx);
+	float dq3 = 0.5f*( q0*gz + q1*gy - q2*gx);
 
-    gx += KP*err_x + est->inte_err[0];
-    gy += KP*err_y + est->inte_err[1];
-    gz += KP*err_z + est->inte_err[2];
+	// 积分更新
+	q0 += dq0 * DT;
+	q1 += dq1 * DT;
+	q2 += dq2 * DT;
+	q3 += dq3 * DT;
 
-    /* 4. 四元数归一化 */
-    float norm = sqrtf(q0*q0 + q1*q1 + q2*q2 + q3*q3);
-    est->q[0] = q0 / norm;
-    est->q[1] = q1 / norm;
-    est->q[2] = q2 / norm;
-    est->q[3] = q3 / norm;
+	// 严格归一化
+	float norm = 1.0f/sqrtf(q0*q0 + q1*q1 + q2*q2 + q3*q3);
+	est->q[0] = q0 * norm;
+	est->q[1] = q1 * norm;
+	est->q[2] = q2 * norm;
+	est->q[3] = q3 * norm;
+
+	/*--- 阶段5：抗积分饱和保护 ---
+	for(int i=0; i<3; i++) {
+		est->inte_err[i] = fmaxf(fminf(est->inte_err[i], 0.1f), -0.1f);
+	}
 }
 
-/* 欧拉角转换函数 */
+/* 欧拉角转换函数
 /**
  * 警告：使用欧拉角转换函数时，XYZ轴必须按照指定的方向：
  * 陀螺仪旋转方向：
@@ -580,3 +586,276 @@ void MPU6050_get_euler_angles(const AttitudeEstimator* est,
     *yaw   *= 57.2957795f;
 }
 
+// 一阶低通滤波
+static inline float low_pass_filter(float input, float* state, float alpha) {
+   // *state = alpha * (*state) + (1 - alpha) * input;
+    //return *state;
+	float filtered = alpha*input+(1-alpha)*(*state);
+	*state = filtered;
+	return filtered;
+}
+
+// 一阶高通滤波
+static inline float high_pass_filter(float input, float* state, float alpha) {
+    //float filtered = input - (alpha * (*state) + (1 - alpha) * input);
+	//*state = input;
+	float filtered = alpha*input+(1-alpha)*(*state);
+	*state = filtered;
+    return filtered;
+}
+
+void MPU6050_update_attitude(AttitudeEstimator* est,
+                    float ax, float ay, float az,
+                    float gx, float gy, float gz)
+{
+    /*----- 1. 传感器预处理 -----*/
+    // 加速度计低通滤波
+    ax = low_pass_filter(ax, &est->acc_lpf[0], ALPHA_LPF);
+    ay = low_pass_filter(ay, &est->acc_lpf[1], ALPHA_LPF);
+    az = low_pass_filter(az, &est->acc_lpf[2], ALPHA_LPF);
+
+    // 陀螺仪高通滤波（去零偏）
+    gx = high_pass_filter(gx, &est->gyro_lpf[0], ALPHA_HPF);
+    gy = high_pass_filter(gy, &est->gyro_lpf[1], ALPHA_HPF);
+    gz = high_pass_filter(gz, &est->gyro_lpf[2], ALPHA_HPF);
+
+    /*----- 2. 加速度计姿态估计 -----*/
+    // 归一化加速度计
+    float norm = 1.0f / sqrtf(ax*ax + ay*ay + az*az);
+    ax *= norm; ay *= norm; az *= norm;
+
+    // 计算俯仰角和横滚角（加速度计基准）
+    float pitch_acc = asinf(ax);
+    float roll_acc  = atan2f(-ay, -az);
+
+    /*----- 3. 陀螺仪姿态积分 -----*/
+    // 当前四元数状态
+    float q0 = est->q[0], q1 = est->q[1], q2 = est->q[2], q3 = est->q[3];
+
+    // 四元数微分方程
+    float dq0 = 0.5f * (-q1*gx - q2*gy - q3*gz);
+    float dq1 = 0.5f * ( q0*gx + q2*gz - q3*gy);
+    float dq2 = 0.5f * ( q0*gy - q1*gz + q3*gx);
+    float dq3 = 0.5f * ( q0*gz + q1*gy - q2*gx);
+
+    // 积分预测
+    q0 += dq0 * DT;
+    q1 += dq1 * DT;
+    q2 += dq2 * DT;
+    q3 += dq3 * DT;
+
+    /*----- 4. 互补滤波融合 -----*/
+    // 四元数转欧拉角
+    float roll_gyro  = atan2f(2*(q0*q1 + q2*q3), 1 - 2*(q1*q1 + q2*q2));
+    float pitch_gyro = asinf(2*(q0*q2 - q3*q1));
+
+    // 角度级互补滤波
+    float roll_comp  = BETA_COMP*roll_gyro  + (1-BETA_COMP)*roll_acc;
+    float pitch_comp = BETA_COMP*pitch_gyro + (1-BETA_COMP)*pitch_acc;
+
+    // 将修正后的角度转换为四元数
+    float cy = cosf(roll_comp * 0.5f);
+    float sy = sinf(roll_comp * 0.5f);
+    float cp = cosf(pitch_comp * 0.5f);
+    float sp = sinf(pitch_comp * 0.5f);
+
+    est->q[0] = cy*cp;          // w
+    est->q[1] = sy*cp;          // x
+    est->q[2] = cy*sp;          // y
+    est->q[3] = sy*sp;          // z
+
+    // 四元数归一化
+    norm = 1.0f / sqrtf(est->q[0]*est->q[0] + est->q[1]*est->q[1]
+           + est->q[2]*est->q[2] + est->q[3]*est->q[3]);
+    est->q[0] *= norm;
+    est->q[1] *= norm;
+    est->q[2] *= norm;
+    est->q[3] *= norm;
+}
+
+/*#include <math.h>
+
+// 配置参数
+#define DT              0.01f    // 采样时间（秒）
+#define GRAVITY         9.80665f // 重力加速度（m/s²）
+#define KP              2.0f     // 互补滤波比例增益
+#define KI              0.005f   // 互补滤波积分增益
+#define Q_ACCEL         0.001f   // 加速度计过程噪声
+#define Q_GYRO          0.003f   // 陀螺仪过程噪声
+#define R_ACCEL         0.5f     // 加速度计测量噪声
+#define R_GYRO          0.1f     // 陀螺仪测量噪声
+
+// 状态向量定义
+typedef struct {
+    float q[4];          // 四元数（姿态）
+    float v[3];          // 速度（m/s）
+    float p[3];          // 位置（m）
+    float inte_err[3];   // 积分误差
+    float P[6][6];       // 卡尔曼滤波协方差矩阵
+} INS_State;
+
+// 初始化惯性导航系统
+void INS_Init(INS_State* state) {
+    state->q[0] = 1.0f;
+    state->q[1] = state->q[2] = state->q[3] = 0.0f;
+    for(int i=0; i<3; i++) {
+        state->v[i] = state->p[i] = state->inte_err[i] = 0.0f;
+    }
+    // 初始化协方差矩阵
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<6; j++) {
+            state->P[i][j] = (i == j) ? 1.0f : 0.0f;
+        }
+    }
+}
+
+// 卡尔曼滤波预测
+void Kalman_Predict(INS_State* state, float ax, float ay, float az, float gx, float gy, float gz) {
+    // 状态转移矩阵（简化模型）
+    float F[6][6] = {0};
+    for(int i=0; i<6; i++) F[i][i] = 1.0f;
+    F[0][3] = F[1][4] = F[2][5] = DT;
+
+    // 过程噪声矩阵
+    float Q[6][6] = {0};
+    Q[0][0] = Q[1][1] = Q[2][2] = Q_ACCEL * DT * DT;
+    Q[3][3] = Q[4][4] = Q[5][5] = Q_GYRO * DT * DT;
+
+    // 状态预测
+    state->v[0] += ax * DT;
+    state->v[1] += ay * DT;
+    state->v[2] += (az - GRAVITY) * DT;
+    state->p[0] += state->v[0] * DT;
+    state->p[1] += state->v[1] * DT;
+    state->p[2] += state->v[2] * DT;
+
+    // 协方差预测
+    float P_pred[6][6] = {0};
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<6; j++) {
+            for(int k=0; k<6; k++) {
+                P_pred[i][j] += F[i][k] * state->P[k][j];
+            }
+        }
+    }
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<6; j++) {
+            state->P[i][j] = P_pred[i][j] + Q[i][j];
+        }
+    }
+}
+
+// 卡尔曼滤波更新
+void Kalman_Update(INS_State* state, float ax, float ay, float az, float gx, float gy, float gz) {
+    // 测量矩阵
+    float H[6][6] = {0};
+    for(int i=0; i<6; i++) H[i][i] = 1.0f;
+
+    // 测量噪声矩阵
+    float R[6][6] = {0};
+    R[0][0] = R[1][1] = R[2][2] = R_ACCEL;
+    R[3][3] = R[4][4] = R[5][5] = R_GYRO;
+
+    // 卡尔曼增益计算
+    float K[6][6] = {0};
+    float S[6][6] = {0};
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<6; j++) {
+            for(int k=0; k<6; k++) {
+                S[i][j] += H[i][k] * state->P[k][j];
+            }
+        }
+    }
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<6; j++) {
+            S[i][j] += R[i][j];
+        }
+    }
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<6; j++) {
+            for(int k=0; k<6; k++) {
+                K[i][j] += state->P[i][k] * H[j][k];
+            }
+            K[i][j] /= S[j][j];
+        }
+    }
+
+    // 状态更新
+    float z[6] = {ax, ay, az, gx, gy, gz};
+    float y[6] = {0};
+    for(int i=0; i<6; i++) {
+        y[i] = z[i] - (H[i][0]*state->v[0] + H[i][1]*state->v[1] + H[i][2]*state->v[2]);
+    }
+    for(int i=0; i<6; i++) {
+        state->v[i] += K[i][0]*y[0] + K[i][1]*y[1] + K[i][2]*y[2];
+    }
+
+    // 协方差更新
+    float I[6][6] = {0};
+    for(int i=0; i<6; i++) I[i][i] = 1.0f;
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<6; j++) {
+            state->P[i][j] = (I[i][j] - K[i][0]*H[0][j]) * state->P[i][j];
+        }
+    }
+}
+
+// 互补滤波姿态解算
+void Complementary_Filter(INS_State* state, float ax, float ay, float az, float gx, float gy, float gz) {
+    // 加速度计归一化
+    float norm = 1.0f/sqrtf(ax*ax + ay*ay + az*az);
+    ax *= norm; ay *= norm; az *= norm;
+
+    // 估计重力方向
+    float vx = 2.0f*(state->q[1]*state->q[3] - state->q[0]*state->q[2]);
+    float vy = 2.0f*(state->q[0]*state->q[1] + state->q[2]*state->q[3]);
+    float vz = state->q[0]*state->q[0] - state->q[1]*state->q[1] - state->q[2]*state->q[2] + state->q[3]*state->q[3];
+
+    // 误差计算
+    float err_x = ay*vz - az*vy;
+    float err_y = az*vx - ax*vz;
+    float err_z = ax*vy - ay*vx;
+
+    // PI补偿
+    state->inte_err[0] += err_x * KI * DT;
+    state->inte_err[1] += err_y * KI * DT;
+    state->inte_err[2] += err_z * KI * DT;
+
+    gx += KP*err_x + state->inte_err[0];
+    gy += KP*err_y + state->inte_err[1];
+    gz += KP*err_z + state->inte_err[2];
+
+    // 四元数更新
+    float q0 = state->q[0] + (-state->q[1]*gx - state->q[2]*gy - state->q[3]*gz) * 0.5f * DT;
+    float q1 = state->q[1] + (state->q[0]*gx + state->q[2]*gz - state->q[3]*gy) * 0.5f * DT;
+    float q2 = state->q[2] + (state->q[0]*gy - state->q[1]*gz + state->q[3]*gx) * 0.5f * DT;
+    float q3 = state->q[3] + (state->q[0]*gz + state->q[1]*gy - state->q[2]*gx) * 0.5f * DT;
+
+    // 归一化
+    norm = 1.0f/sqrtf(q0*q0 + q1*q1 + q2*q2 + q3*q3);
+    state->q[0] = q0*norm;
+    state->q[1] = q1*norm;
+    state->q[2] = q2*norm;
+    state->q[3] = q3*norm;
+}
+
+// 更新惯性导航系统
+void INS_Update(INS_State* state, float ax, float ay, float az, float gx, float gy, float gz) {
+    // 卡尔曼滤波预测
+    Kalman_Predict(state, ax, ay, az, gx, gy, gz);
+
+    // 卡尔曼滤波更新
+    Kalman_Update(state, ax, ay, az, gx, gy, gz);
+
+    // 互补滤波姿态解算
+    Complementary_Filter(state, ax, ay, az, gx, gy, gz);
+}
+
+// 获取欧拉角
+void INS_GetEulerAngles(const INS_State* state, float* roll, float* pitch, float* yaw) {
+    *roll  = atan2f(2.0f*(state->q[0]*state->q[1] + state->q[2]*state->q[3]),
+                    1.0f - 2.0f*(state->q[1]*state->q[1] + state->q[2]*state->q[2]));
+    *pitch = asinf(2.0f*(state->q[0]*state->q[2] - state->q[3]*state->q[1]));
+    *yaw   = atan2f(2.0f*(state->q[0]*state->q[3] + state->q[1]*state->q[2]),
+                    1.0f - 2.0f*(state->q[2]*state->q[2] + state->q[3]*state->q[3]));
+}*/

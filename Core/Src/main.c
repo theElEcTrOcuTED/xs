@@ -25,6 +25,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include <string.h>
+
 #include "tb6612.h"
 #include "mpu6050.h"
 /* USER CODE END Includes */
@@ -63,7 +66,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+asm(".global _printf_float");
 /* USER CODE END 0 */
 
 /**
@@ -104,13 +107,14 @@ int main(void)
   /* USER CODE BEGIN 2 */
   MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
 
-  MPU6050_init_estimator(&attitudeEstimator);//MPU6050 软件姿态解算初始化
+
 
   //等待MPU6050初始化
   HAL_Delay(150);
   //姿态角控制目标初始化
   MPU6050_Data predata;
   MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
+  MPU6050_init_estimator(&attitudeEstimator,&predata);//MPU6050 软件姿态解算初始化
   MPU6050_update_attitude(&attitudeEstimator,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
   //欧拉角解算
   MPU6050_get_euler_angles(&attitudeEstimator,&eulerAngle.roll,&eulerAngle.pitch,&eulerAngle.yaw);
@@ -227,6 +231,37 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     inte_error += error*dt;
 
     //pitch以抬头为正，设风扇正向下吹，则pitch升高时风扇转速应降低，即CCR值应降低
+    char message[70] = "pitch=";
+    char pitchStr[7];
+    char axStr[7];
+    char ayStr[7];
+    char azStr[7];
+    char gyroxStr[7];
+    char gyroyStr[7];
+    char gyrozStr[7];
+    sprintf(pitchStr,"%.2lf",eulerAngle.pitch);
+    sprintf(axStr,"%.2lf",predata.Accel_X);
+    sprintf(ayStr,"%.2lf",predata.Accel_Y);
+    sprintf(azStr,"%.2lf",predata.Accel_Z);
+    sprintf(gyroxStr,"%.2lf",predata.Gyro_X);
+    sprintf(gyroyStr,"%.2lf",predata.Gyro_Y);
+    sprintf(gyrozStr,"%.2lf",predata.Gyro_Z);
+    strcat(message,pitchStr);
+    strcat(message,"\nax=");
+    strcat(message,axStr);
+    strcat(message,"\nay=");
+    strcat(message,ayStr);
+    strcat(message,"\naz=");
+    strcat(message,azStr);
+    strcat(message,"\ngx=");
+    strcat(message,gyroxStr);
+    strcat(message,"\ngy=");
+    strcat(message,gyroyStr);
+    strcat(message,"\ngz=");
+    strcat(message,gyrozStr);
+    strcat(message,"\n\n");
+    HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message), 100);
+
 
     //更新风扇转速
     Motor_SetSpeed(&TB6612_Handle.motorA, output*100);
