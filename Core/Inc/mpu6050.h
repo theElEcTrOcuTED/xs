@@ -158,9 +158,7 @@ typedef struct {
   float yaw;
 } EulerAngle;
 void MPU6050_init_estimator(AttitudeEstimator* est,MPU6050_Data *data);
-void MPU6050_update_attitude(AttitudeEstimator* est,EulerAngle* euler_angle,
-                    float ax, float ay, float az,
-                    float gx, float gy, float gz);
+
 void MPU6050_get_euler_angles(const AttitudeEstimator* est,
                      float* roll, float* pitch, float* yaw);
 float MPU6050_getKP();
@@ -175,14 +173,8 @@ float MPU6050_setDT(float);
 
 
 
-typedef struct {
-  /* 状态向量 [roll, pitch, gyro_bias_x, gyro_bias_y] */
-  float x[4];
-
-  /* 协方差矩阵 (4x4) */
-  float P[4][4];
-} KalmanFilter;
-EulerAngle* tick_and_get_attitude(float gx,float gy,float gz,float ax,float ay,float az);
+void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
+                    float gx, float gy, float gz);
 
 
 

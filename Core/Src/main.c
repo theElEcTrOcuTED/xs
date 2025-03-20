@@ -105,13 +105,13 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  //MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
+  MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
 
 
 
   //等待MPU6050初始化
   HAL_Delay(150);
-  MPU6050_DMP_Init(&MPU6050_hand);
+ //MPU6050_DMP_Init(&MPU6050_hand);
   HAL_Delay(1500);
   //姿态角控制目标初始化
   //MPU6050_Data predata;
@@ -206,15 +206,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
   if(htim->Instance==TIM2) {
     //TIM2 PSC = 63, ARR = 2000, 500Hz，用于触发MPU6050采样和姿态解算
-
-    DMP_Quaternion q;
-    DMP_Euler_Angles e;
+    char messagea[] = "Header\n";
+    HAL_UART_Transmit(&huart3, (uint8_t*)messagea, strlen(messagea),10);
+    //DMP_Quaternion q;
+    //DMP_Euler_Angles e;
+    if(MPU6050_TestConnection(&MPU6050_hand)!=HAL_OK) {
+      MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);
+    }
     MPU6050_Data predata;
     MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
-    MPU6050_DMP_GetData(&MPU6050_hand,&q,&e);
-    eulerAngle.pitch = e.pitch;
-    eulerAngle.roll = e.roll;
-    eulerAngle.yaw = e.yaw;
+    MPU6050_update_attitude(&eulerAngle,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
+    //MPU6050_DMP_GetData(&MPU6050_hand,&q,&e);
+    //eulerAngle.pitch = e.pitch;
+    //eulerAngle.roll = e.roll;
+   // eulerAngle.yaw = e.yaw;
     //MPU6050_update_attitude(&attitudeEstimator,&eulerAngle,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
     //eulerAngle = *tick_and_get_attitude(predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z,predata.Accel_X,predata.Accel_Y,predata.Accel_Z);
     //欧拉角解算
@@ -225,6 +230,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
     //pid控制
     //受控变量：俯仰角
+
     double error = eulerAngle.pitch - controlTarget;            //当前误差
     double dif = (error - last_error)/dt;       //微分量
     double output = Kp*error + Ki*inte_error + Kd*dif;//PID控制量计算
@@ -238,7 +244,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     inte_error += error*dt;
 
     //pitch以抬头为正，设风扇正向下吹，则pitch升高时风扇转速应降低，即CCR值应降低
-    char message[70] = "pitch=";
+    char message[80] = "pitch=";
     char pitchStr[7];
     char rollStr[7];
     char yawStr[7];
@@ -258,29 +264,30 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     sprintf(gyroyStr,"%.2lf",predata.Gyro_Y);
     sprintf(gyrozStr,"%.2lf",predata.Gyro_Z);
     strcat(message,pitchStr);
-    //strcat(message,"\nyaw=");
-    //strcat(message,yawStr);
-    //strcat(message,"\nroll=");
-   // strcat(message,rollStr);
-    /*
+    strcat(message,"\nyaw=");
+    strcat(message,yawStr);
+    strcat(message,"\nroll=");
+    strcat(message,rollStr);
+
     strcat(message,"\nax=");
     strcat(message,axStr);
     strcat(message,"\nay=");
     strcat(message,ayStr);
     strcat(message,"\naz=");
     strcat(message,azStr);
+
     strcat(message,"\ngx=");
     strcat(message,gyroxStr);
     strcat(message,"\ngy=");
     strcat(message,gyroyStr);
     strcat(message,"\ngz=");
-    strcat(message,gyrozStr);*/
+    strcat(message,gyrozStr);
     strcat(message,"\n\n");
-    HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message), 100);
+    //HAL_UART_Transmit_IT(&huart3, (uint8_t*)message, strlen(message));
 
 
     //更新风扇转速
-    Motor_SetSpeed(&TB6612_Handle.motorA, output*100);
+   Motor_SetSpeed(&TB6612_Handle.motorA, output*100);
     //__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 20);
   }
 }
