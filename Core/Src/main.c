@@ -123,7 +123,6 @@ int main(void)
 
   controlTarget = eulerAngle.pitch;
 
-
   /*
   Motor_Handle.in1_pin = GPIO_PIN_14;
   Motor_Handle.in2_pin = GPIO_PIN_13;
@@ -210,9 +209,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     HAL_UART_Transmit(&huart3, (uint8_t*)messagea, strlen(messagea),10);
     //DMP_Quaternion q;
     //DMP_Euler_Angles e;
-    if(MPU6050_TestConnection(&MPU6050_hand)!=HAL_OK) {
-      MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);
-    }
+   // if(MPU6050_TestConnection(&MPU6050_hand)!=HAL_OK) {
+   //   MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);
+   // }
     MPU6050_Data predata;
     MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
     MPU6050_update_attitude(&eulerAngle,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
@@ -287,7 +286,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
 
     //更新风扇转速
-   Motor_SetSpeed(&TB6612_Handle.motorA, output*100);
+  //Motor_SetSpeed(&TB6612_Handle.motorA, output*100);
     //__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 20);
   }
 }

@@ -265,14 +265,15 @@ void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
 	float pitch_acc,roll_acc;
 
 
-	if(fabsf(ay*ay+az*az) > 1e-4 && fabsf(az) > 1e-4) {
+	//if(fabsf(ay*ay+az*az) > 0.000001 && fabsf(az) > 0.000001) {
 		pitch_acc = atanf(ax/sqrtf(ay*ay+az*az))*-57.2957795f;
+		//pitch_acc = ax/(ay*ay+az*az);
 		roll_acc = atanf(ay/az)*-57.2957795f;
-	}
-	else {
-		pitch_acc = currentAngle.pitch;
-		roll_acc = currentAngle.roll;
-	}
+	//}
+	//else {
+	//	pitch_acc = currentAngle.pitch;
+	//	roll_acc = currentAngle.roll;
+	//}
 	//pitch_acc = currentAngle.pitch;
 	//roll_acc = currentAngle.roll;
 
@@ -283,7 +284,7 @@ void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
 	//float roll_acc  = atan2f(-ay, -az);
 
 	/*----- 3. 陀螺仪姿态积分 -----*/
-	/*
+
 	char message[80] = "pitch_acc=";
 	char pitchStr[7];
 	char rollStr[7];
@@ -309,15 +310,15 @@ void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
 	strcat(message,"\nyaw_g=");
 	strcat(message,yawgStr);
 	HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message), 100);
-	*/
+
 	// 积分预测
 	if(fabsf(cosf(currentAngle.pitch/57.2957795f))>1e-10) {
 		float pitch = currentAngle.pitch+(gy*cosf(currentAngle.roll/57.2957795f)-gz*sinf(currentAngle.roll/57.2957795f))*DT;
 		float yaw = currentAngle.yaw+(gy*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)+gz*cosf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f))*DT;
 		float roll = currentAngle.roll+(gx-gy*sinf(currentAngle.pitch/57.2957795f)*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)-gz*cosf(currentAngle.roll/57.2957795f)*sinf(currentAngle.pitch/57.2957795f)/cosf(currentAngle.pitch/57.2957795f))*DT;
-		//gyroAngle.pitch = high_pass_filter(pitch, &gyroAngle.pitch, ALPHA_HPF);
-		//gyroAngle.yaw = high_pass_filter(yaw, &gyroAngle.yaw, ALPHA_HPF);
-		//gyroAngle.roll = high_pass_filter(roll, &gyroAngle.roll, ALPHA_HPF);
+		gyroAngle.pitch = high_pass_filter(pitch, &gyroAngle.pitch, ALPHA_HPF);
+		gyroAngle.yaw = high_pass_filter(yaw, &gyroAngle.yaw, ALPHA_HPF);
+		gyroAngle.roll = high_pass_filter(roll, &gyroAngle.roll, ALPHA_HPF);
 
 
 
