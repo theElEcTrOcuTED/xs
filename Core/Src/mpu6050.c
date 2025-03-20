@@ -263,14 +263,18 @@ void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
 	/*----- 2. 加速度计姿态估计 -----*/
 	// 归一化加速度计
 	float pitch_acc,roll_acc;
-	if(sqrtf(ay*ay+az*az)!=0.0f && az!= 0.0f) {
-		pitch_acc = atan(ax/sqrtf(ay*ay+az*az))*-57.2957795f;
-		roll_acc = atan(ay/az)*-57.2957795f;
+
+
+	if(fabsf(ay*ay+az*az) > 1e-4 && fabsf(az) > 1e-4) {
+		pitch_acc = atanf(ax/sqrtf(ay*ay+az*az))*-57.2957795f;
+		roll_acc = atanf(ay/az)*-57.2957795f;
 	}
 	else {
 		pitch_acc = currentAngle.pitch;
 		roll_acc = currentAngle.roll;
 	}
+	//pitch_acc = currentAngle.pitch;
+	//roll_acc = currentAngle.roll;
 
 	// ax *= norm; ay *= norm; az *= norm;
 
@@ -307,7 +311,7 @@ void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
 	HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message), 100);
 	*/
 	// 积分预测
-	if(cosf(currentAngle.pitch/57.2957795f)!=0.0f) {
+	if(fabsf(cosf(currentAngle.pitch/57.2957795f))>1e-10) {
 		float pitch = currentAngle.pitch+(gy*cosf(currentAngle.roll/57.2957795f)-gz*sinf(currentAngle.roll/57.2957795f))*DT;
 		float yaw = currentAngle.yaw+(gy*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)+gz*cosf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f))*DT;
 		float roll = currentAngle.roll+(gx-gy*sinf(currentAngle.pitch/57.2957795f)*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)-gz*cosf(currentAngle.roll/57.2957795f)*sinf(currentAngle.pitch/57.2957795f)/cosf(currentAngle.pitch/57.2957795f))*DT;

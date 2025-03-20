@@ -283,7 +283,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     strcat(message,"\ngz=");
     strcat(message,gyrozStr);
     strcat(message,"\n\n");
-    //HAL_UART_Transmit_IT(&huart3, (uint8_t*)message, strlen(message));
+    HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message),10);
 
 
     //更新风扇转速
