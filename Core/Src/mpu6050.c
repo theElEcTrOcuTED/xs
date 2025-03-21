@@ -30,6 +30,13 @@ typedef struct PFP {
 PFP pfp_g;
 PFP pfp_a;
 
+//陀螺仪X轴角速度零漂
+float gze_x;
+//陀螺仪Y轴角速度零漂
+float gze_y;
+//陀螺仪Z轴角速度零漂
+float gze_z;
+
 
 
 // 初始化MPU6050
@@ -225,6 +232,12 @@ void MPU6050_get_euler_angles(const AttitudeEstimator* est,
     *yaw   *= 57.2957795f;
 }
 
+//辅助函数，用于规范化角度值
+float normalize_angle(float angle_deg) {
+	angle_deg = fmodf(angle_deg+180.0f,360.0f);
+	if(angle_deg<0) angle_deg+=360.0f;
+	return angle_deg-180.0f;
+}
 
 
 
@@ -247,41 +260,37 @@ static inline float high_pass_filter(float input, float* state, float alpha) {
 }
 
 EulerAngle gyroAngle;
+
 EulerAngle currentAngle;
+
 void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
                     float gx, float gy, float gz) {
 
-	/*----- 1. 传感器预处理 -----*/
-	// 加速度计低通滤波
-	//ax = low_pass_filter(ax, &pfp_a.pf[0], ALPHA_LPF);
-	//ay = low_pass_filter(ay, &pfp_a.pf[1], ALPHA_LPF);
-	//az = low_pass_filter(az, &pfp_a.pf[2], ALPHA_LPF);
-
-	// 陀螺仪高通滤波（去零偏）
+	//陀螺仪去零偏
 	gy-=1.5;
 
+	// 加速度计低通滤波
+	ax = low_pass_filter(ax, &pfp_a.pf[0], ALPHA_LPF);
+	ay = low_pass_filter(ay, &pfp_a.pf[1], ALPHA_LPF);
+	az = low_pass_filter(az, &pfp_a.pf[2], ALPHA_LPF);
+	//对陀螺仪原始信号进行高通滤波
+	gx = high_pass_filter(gx, &pfp_g.pf[0], ALPHA_HPF);
+	gy = high_pass_filter(gy, &pfp_g.pf[1], ALPHA_HPF);
+	gz = high_pass_filter(gz, &pfp_g.pf[2], ALPHA_HPF);
+
+
 	/*----- 2. 加速度计姿态估计 -----*/
-	// 归一化加速度计
+
 	float pitch_acc,roll_acc;
 
-
-	//if(fabsf(ay*ay+az*az) > 0.000001 && fabsf(az) > 0.000001) {
+	//除数判零
+	if(fabsf(ay*ay+az*az) > 1e-10 && fabsf(az) > 1e-10) {
+		//依赖加速度计解算俯仰角和滚转角
 		pitch_acc = atanf(ax/sqrtf(ay*ay+az*az))*-57.2957795f;
-		//pitch_acc = ax/(ay*ay+az*az);
 		roll_acc = atanf(ay/az)*-57.2957795f;
-	//}
-	//else {
-	//	pitch_acc = currentAngle.pitch;
-	//	roll_acc = currentAngle.roll;
-	//}
-	//pitch_acc = currentAngle.pitch;
-	//roll_acc = currentAngle.roll;
-
-	// ax *= norm; ay *= norm; az *= norm;
-
-	// 计算俯仰角和横滚角（加速度计基准）
-	//float pitch_acc = asinf(ax);
-	//float roll_acc  = atan2f(-ay, -az);
+	}
+	//TODO:若除数为0的处理？
+	//TODO:若出现极端加速度，应暂时禁用加速度计.
 
 	/*----- 3. 陀螺仪姿态积分 -----*/
 
@@ -311,22 +320,26 @@ void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
 	strcat(message,yawgStr);
 	HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message), 100);
 
-	// 积分预测
+	// 判零/规避万向节锁死，然后对陀螺仪的数据进行积分
 	if(fabsf(cosf(currentAngle.pitch/57.2957795f))>1e-10) {
-		float pitch = currentAngle.pitch+(gy*cosf(currentAngle.roll/57.2957795f)-gz*sinf(currentAngle.roll/57.2957795f))*DT;
-		float yaw = currentAngle.yaw+(gy*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)+gz*cosf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f))*DT;
-		float roll = currentAngle.roll+(gx-gy*sinf(currentAngle.pitch/57.2957795f)*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)-gz*cosf(currentAngle.roll/57.2957795f)*sinf(currentAngle.pitch/57.2957795f)/cosf(currentAngle.pitch/57.2957795f))*DT;
-		gyroAngle.pitch = high_pass_filter(pitch, &gyroAngle.pitch, ALPHA_HPF);
-		gyroAngle.yaw = high_pass_filter(yaw, &gyroAngle.yaw, ALPHA_HPF);
-		gyroAngle.roll = high_pass_filter(roll, &gyroAngle.roll, ALPHA_HPF);
-
-
-
+		//先进行欧拉角矩阵旋转变换，然后进行陀螺仪积分
+		gyroAngle.pitch+=(gy*cosf(currentAngle.roll/57.2957795f)-gz*sinf(currentAngle.roll/57.2957795f))*DT;
+		gyroAngle.yaw+=(gy*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)+gz*cosf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f))*DT;
+		gyroAngle.roll+=(gx-gy*sinf(currentAngle.pitch/57.2957795f)*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)-gz*cosf(currentAngle.roll/57.2957795f)*sinf(currentAngle.pitch/57.2957795f)/cosf(currentAngle.pitch/57.2957795f))*DT;
+		//判定积分的欧拉角是否越界并进行纠正
+		pitch_acc = normalize_angle(pitch_acc);
+		roll_acc = normalize_angle(roll_acc);
+		gyroAngle.pitch=normalize_angle(gyroAngle.pitch);
+		gyroAngle.yaw=normalize_angle(gyroAngle.yaw);
+		gyroAngle.roll=normalize_angle(gyroAngle.roll);
 
 
 		/*----- 4. 互补滤波融合 -----*/
-		float roll_comp  = BETA_COMP*gyroAngle.roll  + (1-BETA_COMP)*roll_acc;
-		float pitch_comp = BETA_COMP*gyroAngle.pitch + (1-BETA_COMP)*pitch_acc;
+		//修正互补滤波
+		float errorr = normalize_angle(roll_acc-gyroAngle.roll);
+		float errorp = normalize_angle(pitch_acc-gyroAngle.pitch);
+		float pitch_comp = gyroAngle.pitch+(1.0f-BETA_COMP)*errorp;
+		float roll_comp = gyroAngle.yaw+(1.0f-BETA_COMP)*errorr;
 
 		currentAngle.pitch = pitch_comp;
 		currentAngle.roll = roll_comp;

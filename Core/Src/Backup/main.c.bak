@@ -123,7 +123,6 @@ int main(void)
 
   controlTarget = eulerAngle.pitch;
 
-
   /*
   Motor_Handle.in1_pin = GPIO_PIN_14;
   Motor_Handle.in2_pin = GPIO_PIN_13;
@@ -283,7 +282,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     strcat(message,"\ngz=");
     strcat(message,gyrozStr);
     strcat(message,"\n\n");
-    HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message),10);
+    //HAL_UART_Transmit_IT(&huart3, (uint8_t*)message, strlen(message));
 
 
     //更新风扇转速

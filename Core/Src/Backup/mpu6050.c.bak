@@ -266,8 +266,9 @@ void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
 
 
 	if(fabsf(ay*ay+az*az) > 1e-4 && fabsf(az) > 1e-4) {
-		pitch_acc = atanf(ax/sqrtf(ay*ay+az*az))*-57.2957795f;
-		roll_acc = atanf(ay/az)*-57.2957795f;
+		//pitch_acc = atanf(ax/sqrt(ay*ay+az*az))*-57.2957795f;
+		//pitch_acc = ax/(ay*ay+az*az);
+		//roll_acc = atanf(ay/az)*-57.2957795f;
 	}
 	else {
 		pitch_acc = currentAngle.pitch;
