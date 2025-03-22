@@ -337,13 +337,18 @@ static inline float high_pass_filter(float input, float* state, float alpha) {
 EulerAngle gyroAngle;
 
 EulerAngle currentAngle;
-
+int flag = 1;
 void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
                     float gx, float gy, float gz) {
-
-	//[DEBUG]陀螺仪去零偏
+	//[DEBUG]计算处置条件
 	gy-=1.8;
-
+	if(flag) {
+		gyroAngle.pitch = atanf(ax/sqrtf(ay*ay+az*az))*-57.2957795f;
+		gyroAngle.roll = atanf(ay/az)*-57.2957795f;
+		currentAngle.pitch = atanf(ax/sqrtf(ay*ay+az*az))*-57.2957795f;
+		currentAngle.roll = atanf(ay/az)*-57.2957795f;
+		flag = 0;
+	}
 	// 加速度计低通滤波
 	ax = low_pass_filter(ax, &pfp_a.pf[0], ALPHA_LPF);
 	ay = low_pass_filter(ay, &pfp_a.pf[1], ALPHA_LPF);
