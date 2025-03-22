@@ -105,14 +105,19 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS);//MPU6050初始化
+  if(MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS)!=HAL_OK) {
+    HAL_UART_Transmit(&huart3, (uint8_t*)"MPU6050 Init Failed", strlen("MPU6050 Init Failed"),13);
+    HAL_Delay(10000);
+  }
+  ;//MPU6050初始化
 
 
 
   //等待MPU6050初始化
-  HAL_Delay(150);
+  HAL_Delay(1000);
+  //MPU6050_Calibrate(&MPU6050_hand,1000);//校正2s
  //MPU6050_DMP_Init(&MPU6050_hand);
-  HAL_Delay(1500);
+
   //姿态角控制目标初始化
   //MPU6050_Data predata;
  // MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
@@ -215,6 +220,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     MPU6050_Data predata;
     MPU6050_ReadProcessedData(&MPU6050_hand,&predata);
     MPU6050_update_attitude(&eulerAngle,predata.Accel_X,predata.Accel_Y,predata.Accel_Z,predata.Gyro_X,predata.Gyro_Y,predata.Gyro_Z);
+    EulerAngle k = MPU6050_GetKalmanAngle();
     //MPU6050_DMP_GetData(&MPU6050_hand,&q,&e);
     //eulerAngle.pitch = e.pitch;
     //eulerAngle.roll = e.roll;
@@ -247,6 +253,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     char pitchStr[7];
     char rollStr[7];
     char yawStr[7];
+    char kpitchStr[7];
+    char krollStr[7];
     char axStr[7];
     char ayStr[7];
     char azStr[7];
@@ -262,19 +270,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     sprintf(gyroxStr,"%.2lf",predata.Gyro_X);
     sprintf(gyroyStr,"%.2lf",predata.Gyro_Y);
     sprintf(gyrozStr,"%.2lf",predata.Gyro_Z);
+    sprintf(kpitchStr,"%.2lf",k.pitch);
+    sprintf(krollStr,"%.2lf",k.roll);
     strcat(message,pitchStr);
     strcat(message,"\nyaw=");
     strcat(message,yawStr);
     strcat(message,"\nroll=");
     strcat(message,rollStr);
 
+    strcat(message,"\nKroll=");
+    strcat(message,krollStr);
+    strcat(message,"\nKpitch=");
+    strcat(message,kpitchStr);
+/*
     strcat(message,"\nax=");
     strcat(message,axStr);
     strcat(message,"\nay=");
     strcat(message,ayStr);
     strcat(message,"\naz=");
     strcat(message,azStr);
-
+*/
     strcat(message,"\ngx=");
     strcat(message,gyroxStr);
     strcat(message,"\ngy=");
@@ -282,7 +297,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     strcat(message,"\ngz=");
     strcat(message,gyrozStr);
     strcat(message,"\n\n");
-    HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message),10);
+    HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message),13);
 
 
     //更新风扇转速

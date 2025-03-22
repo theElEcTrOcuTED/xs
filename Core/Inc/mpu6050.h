@@ -175,7 +175,8 @@ float MPU6050_setDT(float);
 
 void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
                     float gx, float gy, float gz);
-
+//[DEBUG]实验性函数
+EulerAngle MPU6050_GetKalmanAngle();
 
 
 
