@@ -43,6 +43,11 @@ KalmanFilter kf_pitch;
 KalmanFilter kf_roll;
 void Kalman_Init(KalmanFilter *kf);
 
+//以下是用于零点矫正的函数（加速度计）
+float zgx;
+float zgy;
+float zgz;
+
 // 初始化MPU6050
 /**
  * 初始化指定MPU6050实例。不需要先对*hmpu参数赋初始值（这个函数会自动进行这项工作）。请注意，如果要使用MPU6050的DMP功能进行姿态解算，不要使用该函数进行初始化。应使用MPU6050_DMP_Init()函数。
@@ -54,6 +59,9 @@ void Kalman_Init(KalmanFilter *kf);
  */
 uint8_t MPU6050_Init(MPU6050_HandleTypeDef *hmpu, I2C_HandleTypeDef *hi2c,
                      enum ACC_SCALE aScl, enum GYRO_SCALE gScl) {
+	zgx=0;
+	zgy=0;
+	zgz=0;
   hmpu->hi2c = hi2c;
   hmpu->Address = MPU6050_ADDR;
   hmpu->aScale = aScl;
@@ -82,8 +90,9 @@ uint8_t MPU6050_Init(MPU6050_HandleTypeDef *hmpu, I2C_HandleTypeDef *hi2c,
   HAL_I2C_Mem_Write(hmpu->hi2c, hmpu->Address, ACCEL_CONFIG, 1, &data, 1, 100);
 
   // 配置陀螺仪量程
-  data = (hmpu->gScale << 3);
-  HAL_I2C_Mem_Write(hmpu->hi2c, hmpu->Address, GYRO_CONFIG, 1, &data, 1, 100);
+   data = (hmpu->gScale << 3);
+	HAL_I2C_Mem_Write(hmpu->hi2c, hmpu->Address, GYRO_CONFIG, 1, &data, 1, 100);
+	MPU6050_MyCalibrate(hmpu);
 	Kalman_Init(&kf_pitch);
 	Kalman_Init(&kf_roll);
 
@@ -143,9 +152,9 @@ void MPU6050_ReadProcessedData(MPU6050_HandleTypeDef *hmpu, MPU6050_Data *data) 
   data->Accel_Z = (float)accelRaw[2] / aRes[hmpu->aScale];
 
   // 转换陀螺仪数据
-  data->Gyro_X = (float)gyroRaw[0] / gRes[hmpu->gScale];
-  data->Gyro_Y = (float)gyroRaw[1] / gRes[hmpu->gScale];
-  data->Gyro_Z = (float)gyroRaw[2] / gRes[hmpu->gScale];
+  data->Gyro_X = (float)gyroRaw[0] / gRes[hmpu->gScale] - zgx;
+  data->Gyro_Y = (float)gyroRaw[1] / gRes[hmpu->gScale] - zgy;
+  data->Gyro_Z = (float)gyroRaw[2] / gRes[hmpu->gScale] - zgz;
 
   // 转换温度数据
   data->Temp = (float)tempRaw / 340.0 + 36.53;
@@ -241,6 +250,28 @@ void MPU6050_get_euler_angles(const AttitudeEstimator* est,
     *roll  *= 57.2957795f;
     *pitch *= 57.2957795f;
     *yaw   *= 57.2957795f;
+}
+
+/**
+ * 用于消除零点漂移的函数。采样1000次。请在2s内不要移动MPU6050.
+ * 这个函数不矫正加速度计的数据
+ * @param hmpu 要执行矫正操作的MPU6050结构体
+ */
+void MPU6050_MyCalibrate(MPU6050_HandleTypeDef *hmpu) {
+
+	long float gx = 0;
+	long float gy = 0;
+	long float gz = 0;
+	MPU6050_Data data;
+	for(int i = 0 ; i < 1000 ; i++) {
+		MPU6050_ReadProcessedData(&hmpu, &data);
+		gx+=data.Gyro_X;
+		gy+=data.Gyro_Y;
+		gz+=data.Gyro_Z;
+	}
+	zgx = gx / 1000;
+	zgy = gy / 1000;
+	zgz = gz / 1000;
 }
 
 
