@@ -32,7 +32,6 @@
 #include "dmpKey.h"
 #include "dmpmap.h"
 #include "inv_mpu_dmp_motion_driver.h"
-#include "MPU6050.h"
 #include "Delay.h"
 
 #define   MPU6050			//¶¨ÒåÎÒÃÇÊ¹ÓÃµÄ´«¸ĞÆ÷ÎªMPU6050
@@ -2908,7 +2907,7 @@ uint8_t MPU6050_DMP_Init(void)
 //yaw:º½Ïò½Ç   ¾«¶È:0.1¡ã   ·¶Î§:-180.0¡ã<---> +180.0¡ã
 //·µ»ØÖµ:0,Õı³£
 //    ÆäËû,Ê§°Ü
-uint8_t MPU6050_DMP_Get_Data(float *pitch,float *roll,float *yaw)//£¨5MS  200HZµ÷ÓÃÒ»ÏÂ£¬¸ø DEFAULT_MPU_HZ ÆµÂÊ±£³ÖÒ»ÖÂ£¬»òÕßintÖĞ¶ÏÒı½Å¶ÁÈ¡£©
+uint8_t MPU6050_DMP_Get_Data_euler(float *pitch,float *roll,float *yaw)//£¨5MS  200HZµ÷ÓÃÒ»ÏÂ£¬¸ø DEFAULT_MPU_HZ ÆµÂÊ±£³ÖÒ»ÖÂ£¬»òÕßintÖĞ¶ÏÒı½Å¶ÁÈ¡£©
 {                              //  £¨´Ë´¦ÔÚÖ÷º¯ÊıÖĞÒ»Ö±µ÷ÓÃ£¬ÔÚÖĞ¶Ïº¯ÊıÀï¸üĞÂ ÆµÂÊÎ´±ä£©
 	float q0=1.0f,q1=0.0f,q2=0.0f,q3=0.0f;
 	unsigned long sensor_timestamp;
@@ -2938,4 +2937,76 @@ uint8_t MPU6050_DMP_Get_Data(float *pitch,float *roll,float *yaw)//£¨5MS  200HZµ
 		*yaw   = atan2(2*(q1*q2 + q0*q3),q0*q0+q1*q1-q2*q2-q3*q3) * 57.3;	//yaw
 	}else return 2;
 	return 0;
+}
+
+
+//µÃµ½dmp´¦ÀíºóµÄÊı¾İ(×¢Òâ,±¾º¯ÊıĞèÒª±È½Ï¶à¶ÑÕ»,¾Ö²¿±äÁ¿ÓĞµã¶à)
+//pitch:¸©Ñö½Ç ¾«¶È:0.1¡ã   ·¶Î§:-90.0¡ã <---> +90.0¡ã
+//roll:ºá¹ö½Ç  ¾«¶È:0.1¡ã   ·¶Î§:-180.0¡ã<---> +180.0¡ã
+//yaw:º½Ïò½Ç   ¾«¶È:0.1¡ã   ·¶Î§:-180.0¡ã<---> +180.0¡ã
+//·µ»ØÖµ:0,Õı³£
+//    ÆäËû,Ê§°Ü
+uint8_t MPU6050_DMP_Get_Data_quaternion(float *Q0,float *Q1,float *Q2, float *Q3)//£¨5MS  200HZµ÷ÓÃÒ»ÏÂ£¬¸ø DEFAULT_MPU_HZ ÆµÂÊ±£³ÖÒ»ÖÂ£¬»òÕßintÖĞ¶ÏÒı½Å¶ÁÈ¡£©
+{                              //  £¨´Ë´¦ÔÚÖ÷º¯ÊıÖĞÒ»Ö±µ÷ÓÃ£¬ÔÚÖĞ¶Ïº¯ÊıÀï¸üĞÂ ÆµÂÊÎ´±ä£©
+    float q0=1.0f,q1=0.0f,q2=0.0f,q3=0.0f;
+    unsigned long sensor_timestamp;
+    short gyro[3], accel[3], sensors;
+    unsigned char more;
+    long quat[4];
+    if(dmp_read_fifo(gyro, accel, quat, &sensor_timestamp, &sensors,&more))return 1;
+    /* Gyro and accel data are written to the FIFO by the DMP in chip frame and hardware units.
+     * This behavior is convenient because it keeps the gyro and accel outputs of dmp_read_fifo and mpu_read_fifo consistent.
+    **/
+    /*if (sensors & INV_XYZ_GYRO )
+    send_packet(PACKET_TYPE_GYRO, gyro);
+    if (sensors & INV_XYZ_ACCEL)
+    send_packet(PACKET_TYPE_ACCEL, accel); */
+    /* Unlike gyro and accel, quaternions are written to the FIFO in the body frame, q30.
+     * The orientation is set by the scalar passed to dmp_set_orientation during initialization.
+    **/
+    if(sensors&INV_WXYZ_QUAT)
+    {
+        q0 = quat[0] / q30;	//q30¸ñÊ½×ª»»Îª¸¡µãÊı
+        q1 = quat[1] / q30;
+        q2 = quat[2] / q30;
+        q3 = quat[3] / q30;
+        //¼ÆËãµÃµ½¸©Ñö½Ç/ºá¹ö½Ç/º½Ïò½Ç
+        *Q0 = q0;
+        *Q1 = q1;
+        *Q2 = q2;
+        *Q3 = q3;
+    }else return 2;
+    return 0;
+}
+
+void MPU6050_DMP_get_accel(float *ax,float *ay,float *az) {
+    unsigned short fsr;
+    switch (st.chip_cfg.accel_fsr) {
+        case INV_FSR_2G:
+            fsr = 2;
+        break;
+        case INV_FSR_4G:
+            fsr = 4;
+        break;
+        case INV_FSR_8G:
+            fsr = 8;
+        break;
+        case INV_FSR_16G:
+            fsr = 16;
+        break;
+    }
+    short acc[3];
+    mpu_get_accel_reg(acc,NULL);
+    *ax = (float) acc[0] / fsr ;
+    *ay = (float) acc[1] / fsr ;
+    *az = (float) acc[2] / fsr ;
+}
+
+void MPU6050_DMP_get_gyro(float *gx,float *gy,float *gz) {
+    short gyro[3];
+    unsigned short fsr;
+    mpu_get_gyro_fsr(&fsr);
+    *gx = (float)gyro[0] / fsr;
+    *gy = (float)gyro[1] / fsr;
+    *gz = (float)gyro[2] / fsr;
 }

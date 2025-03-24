@@ -6,7 +6,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include <usart.h>
+#include <../Inc/usart.h>
 
 // 加速度计量程分辨率 (LSB/g)
 static const float aRes[] = {
@@ -57,7 +57,7 @@ float zgz;
  * @param gScl 要选择的角速度量程。
  * @return 是否成功（用== HAL_OK来判断）
  */
-uint8_t MPU6050_Init(MPU6050_HandleTypeDef *hmpu, I2C_HandleTypeDef *hi2c,
+uint8_t myMPU6050_Init(MPU6050_HandleTypeDef *hmpu, I2C_HandleTypeDef *hi2c,
                      enum ACC_SCALE aScl, enum GYRO_SCALE gScl) {
 	zgx=0;
 	zgy=0;
@@ -644,7 +644,7 @@ static const unsigned char dmpMemory[1929] = {
  * @param hmpu
  * @return
  */
-uint8_t MPU6050_DMP_Init(MPU6050_HandleTypeDef *hmpu) {
+uint8_t myMPU6050_DMP_Init(MPU6050_HandleTypeDef *hmpu) {
     uint8_t data[4];
 	hmpu->aScale=ACC_SCALE_2G;
 	hmpu->gScale=GYRO_SCALE_2000_DPS;

@@ -110,7 +110,8 @@ void ins_update_current_euler(float pitch, float roll, float yaw) {
 
 void ins_update_pos(float ax, float ay, float az, float DT) {
     //先将用姿态角估计的重力分量转换到设备坐标系
-    Vector3 gravity_delta = quaternion_cast_to_device({0,0,-1*gravity});
+    Vector3 gtemp = {0,0,-1*gravity};
+    Vector3 gravity_delta = quaternion_cast_to_device(gtemp);
     //在设备坐标系下，去除重力分量
     ax -= gravity_delta.x;
     ay -= gravity_delta.y;

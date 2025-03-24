@@ -8,9 +8,9 @@ extern "C" {
 
 #include "stm32f1xx_hal.h"  // 根据实际芯片型号修改头文件
 #include "stm32f1xx.h"
-
+    void DelayUs_Init(void);
     void delay_us(uint16_t us);
-    void delay_ms(uint16_t us);
+    void delay_ms(uint32_t ms);
 
 #ifdef __cplusplus
 }

@@ -88,7 +88,7 @@ typedef struct {
 
 
 // 函数声明
-uint8_t MPU6050_Init(MPU6050_HandleTypeDef *hmpu, I2C_HandleTypeDef *hi2c,
+uint8_t myMPU6050_Init(MPU6050_HandleTypeDef *hmpu, I2C_HandleTypeDef *hi2c,
                     enum ACC_SCALE aScl, enum GYRO_SCALE gScl);
 void MPU6050_ReadRawData(MPU6050_HandleTypeDef *hmpu, int16_t *accel, int16_t *gyro, int16_t *temp);
 void MPU6050_ReadProcessedData(MPU6050_HandleTypeDef *hmpu, MPU6050_Data *data);

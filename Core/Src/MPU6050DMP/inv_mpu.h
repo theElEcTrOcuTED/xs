@@ -128,8 +128,16 @@ int mpu_register_tap_cb(void (*func)(unsigned char, unsigned char));
 /*********************/
 void get_ms(unsigned long *time);	
 uint8_t  MPU6050_DMP_Init(void);
-uint8_t 	MPU6050_DMP_Get_Data(float *pitch,float *roll,float *yaw);//10MS  100HZ调用一下，给 DEFAULT_MPU_HZ 频率保持一致
+uint8_t 	MPU6050_DMP_Get_Data_euler(float *pitch,float *roll,float *yaw);//10MS  100HZ调用一下，给 DEFAULT_MPU_HZ 频率保持一致
+uint8_t MPU6050_DMP_Get_Data_quaternion(float *q0,float *q1,float *q2, float *q3);
 /*********************/
 /********************/
+
+
+
+void MPU6050_DMP_get_accel(float *ax,float *ay,float *az);
+void MPU6050_DMP_get_gyro(float *gx,float *gy,float *gz);
+
+
 #endif  /* #ifndef _INV_MPU_H_ */
 
