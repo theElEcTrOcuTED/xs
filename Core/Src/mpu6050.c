@@ -259,9 +259,9 @@ void MPU6050_get_euler_angles(const AttitudeEstimator* est,
  */
 void MPU6050_MyCalibrate(MPU6050_HandleTypeDef *hmpu) {
 
-	long float gx = 0;
-	long float gy = 0;
-	long float gz = 0;
+	float gx = 0;
+	float gy = 0;
+	float gz = 0;
 	MPU6050_Data data;
 	for(int i = 0 ; i < 1000 ; i++) {
 		MPU6050_ReadProcessedData(&hmpu, &data);
@@ -419,32 +419,6 @@ void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
 
 	/*----- 3. 陀螺仪姿态积分 -----*/
 
-	char message[80] = "pitch_acc=";
-	char pitchStr[7];
-	char rollStr[7];
-
-	char pitchgStr[7];
-	char rollgStr[7];
-	char yawgStr[7];
-	sprintf(pitchStr,"%.2lf",pitch_acc);
-	sprintf(rollStr,"%.2lf",roll_acc);
-	sprintf(pitchgStr,"%.2lf",(gy*cosf(currentAngle.roll/57.2957795f)-gz*sinf(currentAngle.roll/57.2957795f)));
-	sprintf(yawgStr,"%.2lf",(gy*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)+gz*cosf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)));
-	sprintf(rollgStr,"%.2lf",(gx-gy*sinf(currentAngle.pitch/57.2957795f)*sinf(currentAngle.roll/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)-gz*cosf(currentAngle.roll/57.2957795f)*sinf(currentAngle.pitch/57.2957795f)/cosf(currentAngle.pitch/57.2957795f)));
-
-	strcat(message,pitchStr);
-	strcat(message,"\nroll_acc=");
-	strcat(message,rollStr);
-
-
-	strcat(message,"\npitch_g=");
-	strcat(message,pitchgStr);
-	strcat(message,"\nroll_g=");
-	strcat(message,rollgStr);
-	strcat(message,"\nyaw_g=");
-	strcat(message,yawgStr);
-	//HAL_UART_Transmit(&huart3, (uint8_t*)message, strlen(message), 100);
-
 	// 判零/规避万向节锁死，然后对陀螺仪的数据进行积分
 	if(fabsf(cosf(currentAngle.pitch/57.2957795f))>1e-10) {
 		//先进行欧拉角矩阵旋转变换，然后进行陀螺仪积分
@@ -470,10 +444,11 @@ void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
 		float errorp = normalize_angle(pitch_acc-gyroAngle.pitch);
 		float pitch_comp = gyroAngle.pitch+(1.0f-BETA_COMP)*errorp;
 		float roll_comp = gyroAngle.yaw+(1.0f-BETA_COMP)*errorr;
-
+		/*
 		currentAngle.pitch = pitch_comp;
 		currentAngle.roll = roll_comp;
-		currentAngle.yaw = gyroAngle.yaw;
+		currentAngle.yaw = gyroAngle.yaw;*/
+		currentAngle = MPU6050_GetKalmanAngle();
 
 
 

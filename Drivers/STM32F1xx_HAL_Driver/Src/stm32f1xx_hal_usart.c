@@ -732,8 +732,8 @@ HAL_StatusTypeDef HAL_USART_UnRegisterCallback(USART_HandleTypeDef *husart, HAL_
   *         of u16 provided through pTxData.
   * @param  husart  Pointer to a USART_HandleTypeDef structure that contains
   *                 the configuration information for the specified USART module.
-  * @param  pTxData Pointer to data buffer (u8 or u16 data elements).
-  * @param  Size    Amount of data elements (u8 or u16) to be sent.
+  * @param  pTxData Pointer to data buffer (uint8_t or u16 data elements).
+  * @param  Size    Amount of data elements (uint8_t or u16) to be sent.
   * @param  Timeout Timeout duration.
   * @retval HAL status
   */
@@ -821,8 +821,8 @@ HAL_StatusTypeDef HAL_USART_Transmit(USART_HandleTypeDef *husart, const uint8_t 
   *         of u16 available through pRxData.
   * @param  husart  Pointer to a USART_HandleTypeDef structure that contains
   *                 the configuration information for the specified USART module.
-  * @param  pRxData Pointer to data buffer (u8 or u16 data elements).
-  * @param  Size    Amount of data elements (u8 or u16) to be received.
+  * @param  pRxData Pointer to data buffer (uint8_t or u16 data elements).
+  * @param  Size    Amount of data elements (uint8_t or u16) to be received.
   * @param  Timeout Timeout duration.
   * @retval HAL status
   */
@@ -921,9 +921,9 @@ HAL_StatusTypeDef HAL_USART_Receive(USART_HandleTypeDef *husart, uint8_t *pRxDat
   *         of u16 available through pTxData and through pRxData.
   * @param  husart  Pointer to a USART_HandleTypeDef structure that contains
   *                 the configuration information for the specified USART module.
-  * @param  pTxData Pointer to TX data buffer (u8 or u16 data elements).
-  * @param  pRxData Pointer to RX data buffer (u8 or u16 data elements).
-  * @param  Size    Amount of data elements (u8 or u16) to be sent (same amount to be received).
+  * @param  pTxData Pointer to TX data buffer (uint8_t or u16 data elements).
+  * @param  pRxData Pointer to RX data buffer (uint8_t or u16 data elements).
+  * @param  Size    Amount of data elements (uint8_t or u16) to be sent (same amount to be received).
   * @param  Timeout Timeout duration
   * @retval HAL status
   */
@@ -1062,8 +1062,8 @@ HAL_StatusTypeDef HAL_USART_TransmitReceive(USART_HandleTypeDef *husart, const u
   *         of u16 provided through pTxData.
   * @param  husart  Pointer to a USART_HandleTypeDef structure that contains
   *                 the configuration information for the specified USART module.
-  * @param  pTxData Pointer to data buffer (u8 or u16 data elements).
-  * @param  Size    Amount of data elements (u8 or u16) to be sent.
+  * @param  pTxData Pointer to data buffer (uint8_t or u16 data elements).
+  * @param  Size    Amount of data elements (uint8_t or u16) to be sent.
   * @retval HAL status
   * @note   The USART errors are not managed to avoid the overrun error.
   */
@@ -1116,8 +1116,8 @@ HAL_StatusTypeDef HAL_USART_Transmit_IT(USART_HandleTypeDef *husart, const uint8
   *         of u16 available through pRxData.
   * @param  husart  Pointer to a USART_HandleTypeDef structure that contains
   *                 the configuration information for the specified USART module.
-  * @param  pRxData Pointer to data buffer (u8 or u16 data elements).
-  * @param  Size    Amount of data elements (u8 or u16) to be received.
+  * @param  pRxData Pointer to data buffer (uint8_t or u16 data elements).
+  * @param  Size    Amount of data elements (uint8_t or u16) to be received.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_USART_Receive_IT(USART_HandleTypeDef *husart, uint8_t *pRxData, uint16_t Size)
@@ -1173,9 +1173,9 @@ HAL_StatusTypeDef HAL_USART_Receive_IT(USART_HandleTypeDef *husart, uint8_t *pRx
   *         of u16 available through pTxData and through pRxData.
   * @param  husart  Pointer to a USART_HandleTypeDef structure that contains
   *                 the configuration information for the specified USART module.
-  * @param  pTxData Pointer to TX data buffer (u8 or u16 data elements).
-  * @param  pRxData Pointer to RX data buffer (u8 or u16 data elements).
-  * @param  Size    Amount of data elements (u8 or u16) to be sent (same amount to be received).
+  * @param  pTxData Pointer to TX data buffer (uint8_t or u16 data elements).
+  * @param  pRxData Pointer to RX data buffer (uint8_t or u16 data elements).
+  * @param  Size    Amount of data elements (uint8_t or u16) to be sent (same amount to be received).
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_USART_TransmitReceive_IT(USART_HandleTypeDef *husart, const uint8_t *pTxData, uint8_t *pRxData,
@@ -1233,8 +1233,8 @@ HAL_StatusTypeDef HAL_USART_TransmitReceive_IT(USART_HandleTypeDef *husart, cons
   *         of u16 provided through pTxData.
   * @param  husart  Pointer to a USART_HandleTypeDef structure that contains
   *                 the configuration information for the specified USART module.
-  * @param  pTxData Pointer to data buffer (u8 or u16 data elements).
-  * @param  Size    Amount of data elements (u8 or u16) to be sent.
+  * @param  pTxData Pointer to data buffer (uint8_t or u16 data elements).
+  * @param  Size    Amount of data elements (uint8_t or u16) to be sent.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_USART_Transmit_DMA(USART_HandleTypeDef *husart, const uint8_t *pTxData, uint16_t Size)
@@ -1298,8 +1298,8 @@ HAL_StatusTypeDef HAL_USART_Transmit_DMA(USART_HandleTypeDef *husart, const uint
   *         of u16 available through pRxData.
   * @param  husart  Pointer to a USART_HandleTypeDef structure that contains
   *                 the configuration information for the specified USART module.
-  * @param  pRxData Pointer to data buffer (u8 or u16 data elements).
-  * @param  Size    Amount of data elements (u8 or u16) to be received.
+  * @param  pRxData Pointer to data buffer (uint8_t or u16 data elements).
+  * @param  Size    Amount of data elements (uint8_t or u16) to be received.
   * @retval HAL status
   * @note   The USART DMA transmit channel must be configured in order to generate the clock for the slave.
   * @note   When the USART parity is enabled (PCE = 1) the data received contain the parity bit.
@@ -1396,9 +1396,9 @@ HAL_StatusTypeDef HAL_USART_Receive_DMA(USART_HandleTypeDef *husart, uint8_t *pR
   *         of u16 available through pTxData and through pRxData.
   * @param  husart  Pointer to a USART_HandleTypeDef structure that contains
   *                 the configuration information for the specified USART module.
-  * @param  pTxData Pointer to TX data buffer (u8 or u16 data elements).
-  * @param  pRxData Pointer to RX data buffer (u8 or u16 data elements).
-  * @param  Size    Amount of data elements (u8 or u16) to be received/sent.
+  * @param  pTxData Pointer to TX data buffer (uint8_t or u16 data elements).
+  * @param  pRxData Pointer to RX data buffer (uint8_t or u16 data elements).
+  * @param  Size    Amount of data elements (uint8_t or u16) to be received/sent.
   * @note   When the USART parity is enabled (PCE = 1) the data received contain the parity bit.
   * @retval HAL status
   */

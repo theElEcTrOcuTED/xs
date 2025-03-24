@@ -35,7 +35,14 @@ float gravity;//重力大小的绝对值
 
 
 void ins_init(Attitude_Mode mode, float v0X, float v0Y, float v0Z, float gravityAcc) {
-
+    attitudeMode = mode;
+    v0.x = v0X;
+    v0.y = v0Y;
+    v0.z = v0Z;
+    pos.x = 0;
+    pos.y = 0;
+    pos.z = 0;
+    gravity = gravityAcc;
 }
 
 //辅助函数，用来将指定三维向量从大地坐标系转换到设备坐标系，用于启用四元数时

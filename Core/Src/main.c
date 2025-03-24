@@ -31,6 +31,7 @@
 #include "tb6612.h"
 #include "mpu6050.h"
 #include "ins.h"
+#include "MPU6050DMP/inv_mpu.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -110,6 +111,7 @@ int main(void)
     HAL_UART_Transmit(&huart3, (uint8_t*)"MPU6050 Init Failed", strlen("MPU6050 Init Failed"),13);
     HAL_Delay(10000);
   }
+  MPU6050_DMP_Init();
   ;//MPU6050初始化
 
 

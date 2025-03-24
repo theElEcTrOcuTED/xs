@@ -59,7 +59,8 @@ Core/Src/system_stm32f1xx.c \
 Core/Src/sysmem.c \
 Core/Src/syscalls.c \
 Core/Src/usart.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c
+Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c \
+Core/Src/MPU6050DMP
 
 # ASM sources
 ASM_SOURCES =  \
@@ -123,7 +124,9 @@ C_INCLUDES =  \
 -IDrivers/STM32F1xx_HAL_Driver/Inc \
 -IDrivers/STM32F1xx_HAL_Driver/Inc/Legacy \
 -IDrivers/CMSIS/Device/ST/STM32F1xx/Include \
--IDrivers/CMSIS/Include
+-IDrivers/CMSIS/Include \
+-ICore/Src/MPU6050DMP
+
 
 
 # compile gcc flags

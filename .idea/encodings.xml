@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP" charset="GB2312" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/MPU6050.c" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/MPU6050.h" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/MPU6050_I2C.c" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/MPU6050_I2C.h" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/dmpKey.h" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/dmpmap.h" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/inv_mpu.c" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/inv_mpu.h" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/inv_mpu_dmp_motion_driver.c" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Core/Src/MPU6050DMP/inv_mpu_dmp_motion_driver.h" charset="GBK" />
+  </component>
+</project>
