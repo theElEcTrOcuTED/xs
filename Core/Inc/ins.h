@@ -13,5 +13,5 @@ typedef enum Attitude_Mode{
   ATTITUDE_MODE_EULER,//表示当前工作于欧拉角模式下。此时，四元数的输入将被禁用。
 } Attitude_Mode;
 
-
+void ins_update_pos(float ax, float ay, float az, float DT);
 #endif //INS_H

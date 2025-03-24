@@ -30,6 +30,7 @@
 
 #include "tb6612.h"
 #include "mpu6050.h"
+#include "ins.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
