@@ -31,6 +31,11 @@ void Motor_Init(Motor_HandleTypeDef* motor,
     HAL_TIM_PWM_Start(pwm_tim, pwm_ch);
 }
 
+/**
+ * 当速度为0时，自动设置为滑行（快衰减）而不是刹车。如要刹车，应调用Motor_SetDirection并设置为BRAKE（即慢衰减）.
+ * @param motor
+ * @param speed
+ */
 void Motor_SetSpeed(Motor_HandleTypeDef* motor, float speed)
 {
     // 限制速度范围
@@ -47,8 +52,10 @@ void Motor_SetSpeed(Motor_HandleTypeDef* motor, float speed)
         return;
     }
     // 计算PWM占空比
-    uint32_t arr = motor->pwm_tim->Instance->ARR;
-    __HAL_TIM_SET_COMPARE(motor->pwm_tim, motor->pwm_ch, (int)(speed * arr) / 100);
+    if(speed!=0) {
+        uint32_t arr = motor->pwm_tim->Instance->ARR;
+        __HAL_TIM_SET_COMPARE(motor->pwm_tim, motor->pwm_ch, (int)(speed * arr) / 100);
+    }
 }
 
 void Motor_SetDirection(Motor_HandleTypeDef* motor, Motor_Direction dir)

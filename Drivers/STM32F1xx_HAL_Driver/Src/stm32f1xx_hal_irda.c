@@ -756,8 +756,8 @@ HAL_StatusTypeDef HAL_IRDA_UnRegisterCallback(IRDA_HandleTypeDef *hirda, HAL_IRD
   *        of u16 available through pData.
   * @param hirda Pointer to a IRDA_HandleTypeDef structure that contains
   *              the configuration information for the specified IRDA module.
-  * @param pData Pointer to data buffer (uint8_t or u16 data elements).
-  * @param Size  Amount of data elements (uint8_t or u16) to be sent.
+  * @param pData Pointer to data buffer (u8 or u16 data elements).
+  * @param Size  Amount of data elements (u8 or u16) to be sent.
   * @param Timeout Specify timeout value.
   * @retval HAL status
   */
@@ -841,8 +841,8 @@ HAL_StatusTypeDef HAL_IRDA_Transmit(IRDA_HandleTypeDef *hirda, const uint8_t *pD
   *        of u16 available through pData.
   * @param hirda Pointer to a IRDA_HandleTypeDef structure that contains
   *              the configuration information for the specified IRDA module.
-  * @param pData Pointer to data buffer (uint8_t or u16 data elements).
-  * @param Size  Amount of data elements (uint8_t or u16) to be received.
+  * @param pData Pointer to data buffer (u8 or u16 data elements).
+  * @param Size  Amount of data elements (u8 or u16) to be received.
   * @param Timeout Specify timeout value
   * @retval HAL status
   */
@@ -932,8 +932,8 @@ HAL_StatusTypeDef HAL_IRDA_Receive(IRDA_HandleTypeDef *hirda, uint8_t *pData, ui
   *        of u16 available through pData.
   * @param hirda Pointer to a IRDA_HandleTypeDef structure that contains
   *              the configuration information for the specified IRDA module.
-  * @param pData Pointer to data buffer (uint8_t or u16 data elements).
-  * @param Size  Amount of data elements (uint8_t or u16) to be sent.
+  * @param pData Pointer to data buffer (u8 or u16 data elements).
+  * @param Size  Amount of data elements (u8 or u16) to be sent.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_IRDA_Transmit_IT(IRDA_HandleTypeDef *hirda, const uint8_t *pData, uint16_t Size)
@@ -977,8 +977,8 @@ HAL_StatusTypeDef HAL_IRDA_Transmit_IT(IRDA_HandleTypeDef *hirda, const uint8_t 
   *        of u16 available through pData.
   * @param hirda Pointer to a IRDA_HandleTypeDef structure that contains
   *              the configuration information for the specified IRDA module.
-  * @param pData Pointer to data buffer (uint8_t or u16 data elements).
-  * @param Size  Amount of data elements (uint8_t or u16) to be received.
+  * @param pData Pointer to data buffer (u8 or u16 data elements).
+  * @param Size  Amount of data elements (u8 or u16) to be received.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_IRDA_Receive_IT(IRDA_HandleTypeDef *hirda, uint8_t *pData, uint16_t Size)
@@ -1033,8 +1033,8 @@ HAL_StatusTypeDef HAL_IRDA_Receive_IT(IRDA_HandleTypeDef *hirda, uint8_t *pData,
   *        of u16 available through pData.
   * @param hirda Pointer to a IRDA_HandleTypeDef structure that contains
   *              the configuration information for the specified IRDA module.
-  * @param pData Pointer to data buffer (uint8_t or u16 data elements).
-  * @param Size  Amount of data elements (uint8_t or u16) to be sent.
+  * @param pData Pointer to data buffer (u8 or u16 data elements).
+  * @param Size  Amount of data elements (u8 or u16) to be sent.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_IRDA_Transmit_DMA(IRDA_HandleTypeDef *hirda, const uint8_t *pData, uint16_t Size)
@@ -1100,8 +1100,8 @@ HAL_StatusTypeDef HAL_IRDA_Transmit_DMA(IRDA_HandleTypeDef *hirda, const uint8_t
   *        of u16 available through pData.
   * @param hirda Pointer to a IRDA_HandleTypeDef structure that contains
   *              the configuration information for the specified IRDA module.
-  * @param pData Pointer to data buffer (uint8_t or u16 data elements).
-  * @param Size  Amount of data elements (uint8_t or u16) to be received.
+  * @param pData Pointer to data buffer (u8 or u16 data elements).
+  * @param Size  Amount of data elements (u8 or u16) to be received.
   * @note   When the IRDA parity is enabled (PCE = 1) the data received contain the parity bit.
   * @retval HAL status
   */

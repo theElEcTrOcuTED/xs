@@ -31,9 +31,11 @@
 #include "tb6612.h"
 //#include "mpu6050.h"
 #include <delay.h>
+#include <math.h>
 
 #include "ins.h"
 #include "MPU6050DMP/inv_mpu.h"
+#include "debug_usart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,7 +111,6 @@ int main(void)
   MX_TIM3_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
-  DelayUs_Init();
   /* USER CODE BEGIN 2 */
   /*
   if(MPU6050_Init(&MPU6050_hand,&hi2c1,ACC_SCALE_2G,GYRO_SCALE_250_DPS)!=HAL_OK) {
@@ -120,10 +121,12 @@ int main(void)
   MPU6050_DMP_Init();
   ;//MPU6050初始化
 
-
-
-  //等待MPU6050初始化
   HAL_Delay(1000);
+  float ax,ay,az;
+  MPU6050_DMP_get_accel(&ax,&ay,&az);
+  ins_init(ATTITUDE_MODE_QUATERNION,0,0,0,sqrtf(ax*ax+ay*ay+az*az));
+  //等待MPU6050初始化
+
   //MPU6050_Calibrate(&MPU6050_hand,1000);//校正2s
  //MPU6050_DMP_Init(&MPU6050_hand);
 
@@ -149,6 +152,7 @@ int main(void)
   TB6612_Init(&TB6612_Handle,&Motor_Handle,NULL,NULL,0);
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 70);
   TB6612_Enable(&TB6612_Handle);
+  debug_usart_init(19,&huart3,200);
   HAL_TIM_Base_Start_IT(&htim2);
  // Motor_SetSpeed(&TB6612_Handle.motorA, 20);
   /* USER CODE END 2 */
@@ -221,12 +225,39 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
     float q0,q1,q2,q3;
     float ax,ay,az,gx,gy,gz;
-
+    float pitch,yaw,roll;
     MPU6050_DMP_Get_Data_quaternion(&q0,&q1,&q2,&q3);
     MPU6050_DMP_get_accel(&ax,&ay,&az);
     MPU6050_DMP_get_gyro(&gx,&gy,&gz);
+    MPU6050_DMP_Get_Data_euler(&pitch,&roll,&yaw);
     ins_update_current_quaternion(q0,q1,q2,q3);
     ins_update_pos(ax,ay,az,1.0f/100);
+    float posx,posy,posz;
+    float vx,vy,vz;
+    ins_get_position(&posx,&posy,&posz);
+    ins_get_velocity(&vx,&vy,&vz);
+    float data[19]={
+      pitch,
+      yaw,
+      roll,
+      q0,
+      q1,
+      q2,
+      q3,
+      ax,
+      ay,
+      az,
+      gx,
+      gy,
+      gz,
+      posx,
+      posy,
+      posz,
+      vx,
+      vy,
+      vz
+    };
+    debug_usart_send(data);
 
 
     double error = 0;//eulerAngle.pitch - controlTarget;            //当前误差
@@ -240,7 +271,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
       output = -1.0;
     }
     inte_error += error*dt;
-    HAL_USART_Transmit()
 
   }
 }

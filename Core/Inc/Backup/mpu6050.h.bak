@@ -88,7 +88,7 @@ typedef struct {
 
 
 // 函数声明
-uint8_t MPU6050_Init(MPU6050_HandleTypeDef *hmpu, I2C_HandleTypeDef *hi2c,
+uint8_t myMPU6050_Init(MPU6050_HandleTypeDef *hmpu, I2C_HandleTypeDef *hi2c,
                     enum ACC_SCALE aScl, enum GYRO_SCALE gScl);
 void MPU6050_ReadRawData(MPU6050_HandleTypeDef *hmpu, int16_t *accel, int16_t *gyro, int16_t *temp);
 void MPU6050_ReadProcessedData(MPU6050_HandleTypeDef *hmpu, MPU6050_Data *data);
@@ -175,7 +175,9 @@ float MPU6050_setDT(float);
 
 void MPU6050_update_attitude(EulerAngle *output,float ax, float ay, float az,
                     float gx, float gy, float gz);
-
+void MPU6050_MyCalibrate(MPU6050_HandleTypeDef *hmpu);
+//[DEBUG]实验性函数
+EulerAngle MPU6050_GetKalmanAngle();
 
 
 

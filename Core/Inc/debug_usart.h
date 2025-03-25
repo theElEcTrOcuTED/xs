@@ -7,4 +7,9 @@
 #ifndef DEBUG_USART_H
 #define DEBUG_USART_H
 #include "usart.h"
+
+
+void debug_usart_init(int channel_count,USART_HandleTypeDef *huart,int timeout);
+void debug_usart_change_channel_number(int channel_number);
+void debug_usart_send(float *data);
 #endif //DEBUG_USART_H
