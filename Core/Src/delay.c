@@ -37,7 +37,16 @@ void DelayUs_Init(void) {
 
 void delay_us(uint16_t us) {
     uint16_t start = __HAL_TIM_GET_COUNTER(&htim_delay);
-    while ((uint16_t)(__HAL_TIM_GET_COUNTER(&htim_delay)) - start < us);
+    uint16_t arr = __HAL_TIM_GetAutoreload(&htim_delay);
+    if(arr-start>us) {
+        int count = us / (arr-start);
+        for(int i = 0 ; i < count ; i++) {
+            while ((uint16_t)(__HAL_TIM_GET_COUNTER(&htim_delay)) - start < us);
+        }
+    }
+    else {
+        while ((uint16_t)(__HAL_TIM_GET_COUNTER(&htim_delay)) - start < us);
+    }
 }
 void delay_ms(uint32_t ms) {
   delay_us(ms * 1000);

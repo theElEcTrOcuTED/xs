@@ -45,7 +45,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MPU6050
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -117,10 +117,18 @@ int main(void)
   MX_TIM3_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  DelayUs_Init();
   /* USER CODE BEGIN 2 */
 
-
+ //mpu6050_bridge_init(&hi2c1);
   MPU6050_DMP_Init();
+  /*
+  uint8_t dat = 0x00;
+  while(1) {
+    HAL_I2C_Mem_Write(&hi2c1, 0b00001000, 0x0D , I2C_MEMADD_SIZE_8BIT , &dat, 1 ,100);
+   // mpu6050_write(0x1F, 0x0D, 1, &dat);
+  }*/
+  //MPU6050_DMP_Init();
 
 
   HAL_Delay(1000);
@@ -142,7 +150,10 @@ int main(void)
   TB6612_Enable(&TB6612_Handle2);
 
   //串口调试初始化
-  debug_usart_init(19,&huart3,200);
+  debug_usart_init(6,&huart3,5000);
+  float number[] ={0,1,2,3};
+ // HAL_UART_Transmit(&huart3,(uint8_t*)number,sizeof(float)*4,100);
+  //debug_usart_send(number);
   //启用TIM2中断（100Hz）用于更新姿态
   HAL_TIM_Base_Start_IT(&htim2);
 
@@ -228,7 +239,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     float q0,q1,q2,q3;
     float ax,ay,az,gx,gy,gz;
     float pitch,yaw,roll;
-    MPU6050_DMP_Get_Data_quaternion(&q0,&q1,&q2,&q3);
+    int a =  MPU6050_DMP_Get_Data_quaternion(&q0,&q1,&q2,&q3);
     MPU6050_DMP_get_accel(&ax,&ay,&az);
     MPU6050_DMP_get_gyro(&gx,&gy,&gz);
     MPU6050_DMP_Get_Data_euler(&pitch,&roll,&yaw);
@@ -238,26 +249,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     float vx,vy,vz;
     ins_get_position(&posx,&posy,&posz);
     ins_get_velocity(&vx,&vy,&vz);
-    float data[19]={
-      pitch,
-      yaw,
-      roll,
-      q0,
+    float data[6]={
+      a,
       q1,
       q2,
-      q3,
-      ax,
-      ay,
-      az,
-      gx,
-      gy,
-      gz,
       posx,
       posy,
       posz,
-      vx,
-      vy,
-      vz
     };
     debug_usart_send(data);//发送调试数据
 
