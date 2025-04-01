@@ -118,9 +118,10 @@ int main(void)
   MX_TIM3_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  //HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
   DelayUs_Init();
   /* USER CODE BEGIN 2 */
-  keyboard_init();
+  //keyboard_init();
  //mpu6050_bridge_init(&hi2c1);
   MPU6050_DMP_Init();
   /*
@@ -131,10 +132,12 @@ int main(void)
   }*/
   //MPU6050_DMP_Init();
 
-
-  HAL_Delay(1000);
+  HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
+  delay_ms(1000);    //这一句有问题
   float ax,ay,az;
+  HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
   MPU6050_DMP_get_accel(&ax,&ay,&az);
+  HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
   ins_init(ATTITUDE_MODE_QUATERNION,0,0,0,sqrtf(ax*ax+ay*ay+az*az));
 
 
@@ -151,7 +154,7 @@ int main(void)
   TB6612_Enable(&TB6612_Handle2);
 
   //串口调试初始化
-  debug_usart_init(6,&huart3,5000);
+  debug_usart_init(6,&huart3,100);
   float number[] ={0,1,2,3};
  // HAL_UART_Transmit(&huart3,(uint8_t*)number,sizeof(float)*4,100);
   //debug_usart_send(number);
@@ -240,6 +243,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     float q0,q1,q2,q3;
     float ax,ay,az,gx,gy,gz;
     float pitch,yaw,roll;
+   // HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
     int a =  MPU6050_DMP_Get_Data_quaternion(&q0,&q1,&q2,&q3);
     MPU6050_DMP_get_accel(&ax,&ay,&az);
     MPU6050_DMP_get_gyro(&gx,&gy,&gz);
@@ -251,9 +255,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     ins_get_position(&posx,&posy,&posz);
     ins_get_velocity(&vx,&vy,&vz);
     float data[6]={
-      a,
-      q1,
-      q2,
+      pitch,
+      roll,
+      yaw,
       posx,
       posy,
       posz,
