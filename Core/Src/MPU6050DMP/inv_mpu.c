@@ -3006,6 +3006,7 @@ void MPU6050_DMP_get_gyro(float *gx,float *gy,float *gz) {
     short gyro[3];
     unsigned short fsr;
     mpu_get_gyro_fsr(&fsr);
+    mpu_get_gyro_reg(gyro,NULL);
     *gx = (float)gyro[0] / fsr;
     *gy = (float)gyro[1] / fsr;
     *gz = (float)gyro[2] / fsr;

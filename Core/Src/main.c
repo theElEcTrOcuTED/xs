@@ -36,6 +36,7 @@
 #include "ins.h"
 #include "MPU6050DMP/inv_mpu.h"
 #include "debug_usart.h"
+#include "keyboard.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -119,7 +120,7 @@ int main(void)
   MX_USART3_UART_Init();
   DelayUs_Init();
   /* USER CODE BEGIN 2 */
-
+  keyboard_init();
  //mpu6050_bridge_init(&hi2c1);
   MPU6050_DMP_Init();
   /*
