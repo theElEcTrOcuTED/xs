@@ -154,7 +154,7 @@ int main(void)
   TB6612_Enable(&TB6612_Handle2);
 
   //串口调试初始化
-  debug_usart_init(6,&huart3,100);
+  debug_usart_init(6,&huart2,100);
   float number[] ={0,1,2,3};
  // HAL_UART_Transmit(&huart3,(uint8_t*)number,sizeof(float)*4,100);
   //debug_usart_send(number);
@@ -243,11 +243,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     float q0,q1,q2,q3;
     float ax,ay,az,gx,gy,gz;
     float pitch,yaw,roll;
-   // HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
+
     int a =  MPU6050_DMP_Get_Data_quaternion(&q0,&q1,&q2,&q3);
     MPU6050_DMP_get_accel(&ax,&ay,&az);
     MPU6050_DMP_get_gyro(&gx,&gy,&gz);
-    MPU6050_DMP_Get_Data_euler(&pitch,&roll,&yaw);
+    //MPU6050_DMP_Get_Data_euler(&pitch,&roll,&yaw);
+    pitch = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3;	// pitch
+    roll  = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3;	// roll
+    yaw   = atan2(2*(q1*q2 + q0*q3),q0*q0+q1*q1-q2*q2-q3*q3) * 57.3;	//yaw
     ins_update_current_quaternion(q0,q1,q2,q3);
     ins_update_pos(ax,ay,az,1.0f/100);
     float posx,posy,posz;
@@ -258,9 +261,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
       pitch,
       roll,
       yaw,
-      posx,
-      posy,
-      posz,
+      q0,
+      q1,
+      q2,
     };
     debug_usart_send(data);//发送调试数据
 
