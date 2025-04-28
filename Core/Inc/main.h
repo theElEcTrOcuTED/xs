@@ -57,14 +57,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define TIM3_CH1_ENCODER_Pin GPIO_PIN_6
-#define TIM3_CH1_ENCODER_GPIO_Port GPIOA
-#define TIM3_CH2_ENCODER_Pin GPIO_PIN_7
-#define TIM3_CH2_ENCODER_GPIO_Port GPIOA
-#define TIM3_CH3_ENCODER_Pin GPIO_PIN_0
-#define TIM3_CH3_ENCODER_GPIO_Port GPIOB
-#define TIM3_CH4_ENCODER_Pin GPIO_PIN_1
-#define TIM3_CH4_ENCODER_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

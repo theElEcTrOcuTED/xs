@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tb6612.h"
+//#include "tb6612.h"
 //#include "mpu6050.h"
 #include <delay.h>
 #include <math.h>
@@ -37,6 +37,8 @@
 #include "MPU6050DMP/inv_mpu.h"
 #include "debug_usart.h"
 #include "keyboard.h"
+
+#include "BLE/atk_mw579.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,15 +63,9 @@
 MPU6050_HandleTypeDef MPU6050_hand; //MPU6050 句柄结构体
 AttitudeEstimator attitudeEstimator;//MPU6050 姿态解算结构体
 EulerAngle eulerAngle;//MPU6050 当前欧拉角*/
-TB6612_HandleTypeDef TB6612_Handle1;
-Motor_HandleTypeDef Motor_Handle1;
-Motor_HandleTypeDef Motor_Handle3;
 
-TB6612_HandleTypeDef TB6612_Handle2;
-Motor_HandleTypeDef Motor_Handle2;
-Motor_HandleTypeDef Motor_Handle4;
 
-double controlTarget;//控制目标
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -113,13 +109,9 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
-  MX_TIM1_Init();
   MX_TIM2_Init();
-  MX_TIM3_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
-  //HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
-  DelayUs_Init();
   /* USER CODE BEGIN 2 */
   //keyboard_init();
  //mpu6050_bridge_init(&hi2c1);
@@ -131,7 +123,7 @@ int main(void)
    // mpu6050_write(0x1F, 0x0D, 1, &dat);
   }*/
   //MPU6050_DMP_Init();
-
+  uint8_t ret = atk_mw579_init(ATK_MW579_UART_BAUDRATE_115200);
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
   delay_ms(1000);    //这一句有问题
   float ax,ay,az;
@@ -142,16 +134,7 @@ int main(void)
 
 
 
-  //TB6612FNG板1、电机1,3初始化，电机1、3公用PWM IN1 IN2三个引脚
-  Motor_Init(&Motor_Handle1,&htim1,TIM_CHANNEL_1,GPIOB,GPIO_PIN_12,GPIOB,GPIO_PIN_13);
-  Motor_Init(&Motor_Handle3,&htim1,TIM_CHANNEL_1,GPIOB,GPIO_PIN_12,GPIOB,GPIO_PIN_13);
-  TB6612_Init(&TB6612_Handle1,&Motor_Handle1,&Motor_Handle3,NULL,0);
-  TB6612_Enable(&TB6612_Handle1);
-  //TB6612FNG板2、电机2,4初始化，电机2、4公用PWM IN1 IN2三个引脚
-  Motor_Init(&Motor_Handle2,&htim1,TIM_CHANNEL_2,GPIOB,GPIO_PIN_14,GPIOB,GPIO_PIN_15);
-  Motor_Init(&Motor_Handle4,&htim1,TIM_CHANNEL_2,GPIOB,GPIO_PIN_14,GPIOB,GPIO_PIN_15);
-  TB6612_Init(&TB6612_Handle2,&Motor_Handle2,&Motor_Handle4,NULL,0);
-  TB6612_Enable(&TB6612_Handle2);
+
 
   //串口调试初始化
   debug_usart_init(6,&huart2,100);
@@ -214,22 +197,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
-//标志当前工作状态；画直线还是圆
-typedef enum {
-  STRAIGHT_LINE_1,//稳定画出一条长度不短于50cm的直线段
-  STRAIGHT_LINE_2,//稳定画出长度在30-60cm间可设置的直线段
-  STRAIGHT_LINE_3,//按照设定的方向角度摆动，画出不短于20cm的直线段
-  STOP,//拉起一定角度放开，5s内静止
-  CIRCLE,
-} currentStatus;
 
-
-double Kp = 2.0;
-double Ki = 0.01;
-double Kd = 0.1;
-double dt = 1/500.0f;
-double inte_error;
-double last_error;
 
 
 
@@ -268,20 +236,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     debug_usart_send(data);//发送调试数据
 
     //更新控制目标
-
-
-    double error = 0;//eulerAngle.pitch - controlTarget;            //当前误差
-    double dif = (error - last_error)/dt;       //微分量
-    double output = Kp*error + Ki*inte_error + Kd*dif;//PID控制量计算
-    output /= 200;
-    if(output > 1.0) {
-      output = 1.0;
-    }
-    else if (output<-1.0) {
-      output = -1.0;
-    }
-    inte_error += error*dt;
-
   }
 }
 /* USER CODE END 4 */
