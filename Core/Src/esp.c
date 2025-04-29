@@ -46,7 +46,6 @@ void ESP01_Init(UART_HandleTypeDef* huart, int isMaster) {
         char cmd[128];
         snprintf(cmd, sizeof(cmd), "AT+CWSAP=\"%s\",\"%s\",%d,%d", WIFI_SSID, WIFI_PASSWORD,2,4);//通过snprinf格式化字符串构造AT指令.SSID和PW为宏定义，信道为2，加密方式为WPA_WPA2_PSK.
         ESP01_SendCommand(cmd, "OK", 10000);//发送格式化的AT指令字符串。因为这次指令要启用WIFI，超时长些
-        ESP01_SendCommand("AT+CIPMODE=1", "OK", AT_TIMEOUT_MS);
         ESP01_SendCommand("AT+CIPMUX=1", "OK", AT_TIMEOUT_MS); // 多连接模式
         //主机IP 192.168.4.1
         snprintf(cmd,sizeof(cmd),"AT+CIPAP=\"%s\"","192.168.4.1");
