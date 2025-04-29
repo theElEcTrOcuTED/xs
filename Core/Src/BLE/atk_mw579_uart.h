@@ -35,7 +35,7 @@
 #define ATK_MW579_UART_INTERFACE            USART2
 #define ATK_MW579_UART_IRQn                 USART2_IRQn
 #define ATK_MW579_UART_IRQHandler           USART2_IRQHandler
-#define ATK_MW579_UART_CLK_ENABLE()         do{ __HAL_RCC_USART5_CLK_ENABLE(); }while(0)
+#define ATK_MW579_UART_CLK_ENABLE()         do{ __HAL_RCC_USART2_CLK_ENABLE(); }while(0)
 
 /* UART收发缓冲大小 */
 #define ATK_MW579_UART_RX_BUF_SIZE          2048

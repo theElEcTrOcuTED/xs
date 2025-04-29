@@ -27,7 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
-
+#include "esp.h"
 //#include "tb6612.h"
 //#include "mpu6050.h"
 #include <delay.h>
@@ -38,7 +38,7 @@
 #include "debug_usart.h"
 #include "keyboard.h"
 
-#include "BLE/atk_mw579.h"
+//#include "BLE/atk_mw579.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -123,7 +123,6 @@ int main(void)
    // mpu6050_write(0x1F, 0x0D, 1, &dat);
   }*/
   //MPU6050_DMP_Init();
-  uint8_t ret = atk_mw579_init(ATK_MW579_UART_BAUDRATE_115200);
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
   delay_ms(1000);    //这一句有问题
   float ax,ay,az;
@@ -137,11 +136,18 @@ int main(void)
 
 
   //串口调试初始化
-  debug_usart_init(6,&huart2,100);
+  debug_usart_init(6,&huart3,100);
   float number[] ={0,1,2,3};
  // HAL_UART_Transmit(&huart3,(uint8_t*)number,sizeof(float)*4,100);
   //debug_usart_send(number);
   //启用TIM2中断（100Hz）用于更新姿态
+
+
+  //ESP01 串口转WIFI模块初始化
+  ESP01_Init(&huart2);
+
+
+
   HAL_TIM_Base_Start_IT(&htim2);
 
   /* USER CODE END 2 */

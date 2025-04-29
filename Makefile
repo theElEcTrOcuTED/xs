@@ -60,7 +60,10 @@ Core/Src/sysmem.c \
 Core/Src/syscalls.c \
 Core/Src/usart.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c \
-Core/Src/MPU6050DMP
+Core/Src/MPU6050DMP \
+Core/Src/BLE \
+Core/Src/esp.c \
+Core/Src/debug_usart.c
 
 # ASM sources
 ASM_SOURCES =  \

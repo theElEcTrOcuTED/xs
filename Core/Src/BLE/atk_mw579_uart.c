@@ -129,6 +129,7 @@ void atk_mw579_uart_init(uint32_t baudrate)
  */
 void ATK_MW579_UART_IRQHandler(void)
 {
+
     uint8_t tmp;
     
     if (__HAL_UART_GET_FLAG(&g_uart_handle, UART_FLAG_ORE) != RESET)        /* UART接收过载错误中断 */
