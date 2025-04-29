@@ -13,8 +13,8 @@
 
 // 配置参数
 //#define ESP01_UART       huart2        // 使用的UART句柄
-#define WIFI_SSID       "Your_SSID"    // WiFi名称
-#define WIFI_PASSWORD   "Your_Pass"    // WiFi密码
+#define WIFI_SSID       "Chtholly"    // WiFi名称
+#define WIFI_PASSWORD   "ichishiawase"    // WiFi密码
 #define TCP_SERVER_PORT 8080           // TCP服务器端口
 #define AT_TIMEOUT_MS   3000           // AT指令默认超时时间
 #define MAX_RETRY       3              // 指令重试次数

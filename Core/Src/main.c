@@ -64,14 +64,15 @@ MPU6050_HandleTypeDef MPU6050_hand; //MPU6050 句柄结构体
 AttitudeEstimator attitudeEstimator;//MPU6050 姿态解算结构体
 EulerAngle eulerAngle;//MPU6050 当前欧拉角*/
 
-
+//从机ID
+const int SLAVE_ID = 1;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+void MasterESPDataHandler(uint8_t conn_id, uint8_t* data, uint16_t len);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -144,8 +145,9 @@ int main(void)
 
 
   //ESP01 串口转WIFI模块初始化
-  ESP01_Init(&huart2);
-
+  ESP01_Init(&huart2,0);
+  //设置用来处理接收到的信息的回调函数
+  ESP01_SetDataCallback(MasterESPDataHandler);
 
 
   HAL_TIM_Base_Start_IT(&htim2);
@@ -210,7 +212,6 @@ void SystemClock_Config(void)
 //NVIC中断服务函数
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
-
   //TIM2定时器中断，触发频率100Hz，用于更新姿态
   if(htim->Instance==TIM2) {
     //更新当前姿态
@@ -240,9 +241,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
       q2,
     };
     debug_usart_send(data);//发送调试数据
-
-    //更新控制目标
+    //构建数据包
+    uint8_t buffer[42];
+    memcpy(buffer,">HEAD",5);
+    memcpy(buffer+5,&SLAVE_ID,4);
+    memcpy(buffer+9,&pitch,4);
+    memcpy(buffer+13,&yaw,4);
+    memcpy(buffer+17,&roll,4);
+    memcpy(buffer+21,&q0,4);
+    memcpy(buffer+25,&q1,4);
+    memcpy(buffer+29,&q2,4);
+    memcpy(buffer+33,&q3,4);
+    memcpy(buffer+37,">END",4);
   }
+
+}
+//自定义的主机的接+IPD消息处理函数
+void MasterESPDataHandler(uint8_t conn_id, uint8_t* data, uint16_t len){
 }
 /* USER CODE END 4 */
 

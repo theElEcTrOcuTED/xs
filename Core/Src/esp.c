@@ -21,7 +21,7 @@ typedef struct {
 static UART_HandleTypeDef* esp_huart;
 static RingBuffer rx_buffer = {0};
 static DataReceivedCallback data_callback = NULL;
-
+int IsMaster;
 // 私有函数声明
 void UART_RxCpltCallback(UART_HandleTypeDef *huart);
 static ESP01_Status WaitForResponse(const char* expect, uint32_t timeout);
@@ -30,7 +30,7 @@ static void ParseIPDPacket(uint8_t* data, uint16_t len);
 // 初始化模块
 void ESP01_Init(UART_HandleTypeDef* huart, int isMaster) {
     esp_huart = huart;
-
+    IsMaster = isMaster;
     // 配置UART接收中断
     //  注意STM32的所有串口公用一个串口回调函数，所以如果需要非阻塞地同时使用多个串口，这里的回调函数需要重写
     //HAL_UART_RegisterCallback(esp_huart, HAL_UART_RX_COMPLETE_CB_ID, UART_RxCpltCallback);
@@ -41,15 +41,16 @@ void ESP01_Init(UART_HandleTypeDef* huart, int isMaster) {
         ESP01_SendCommand("AT+CWMODE=2", "OK", AT_TIMEOUT_MS); // AP模式
         ESP01_SendCommand("AT+RST", "OK", AT_TIMEOUT_MS);//重启生效
         delay_ms(300);//等待重启
-
-        // 设置AP参数，启用WIFI
         char cmd[128];
-        snprintf(cmd, sizeof(cmd), "AT+CWSAP=\"%s\",\"%s\",%d,%d", WIFI_SSID, WIFI_PASSWORD,2,4);//通过snprinf格式化字符串构造AT指令.SSID和PW为宏定义，信道为2，加密方式为WPA_WPA2_PSK.
-        ESP01_SendCommand(cmd, "OK", 10000);//发送格式化的AT指令字符串。因为这次指令要启用WIFI，超时长些
-        ESP01_SendCommand("AT+CIPMUX=1", "OK", AT_TIMEOUT_MS); // 多连接模式
+
         //主机IP 192.168.4.1
         snprintf(cmd,sizeof(cmd),"AT+CIPAP=\"%s\"","192.168.4.1");
         ESP01_SendCommand(cmd, "OK", AT_TIMEOUT_MS);
+
+        // 设置AP参数，启用WIFI
+        snprintf(cmd, sizeof(cmd), "AT+CWSAP=\"%s\",\"%s\",%d,%d", WIFI_SSID, WIFI_PASSWORD,2,4);//通过snprinf格式化字符串构造AT指令.SSID和PW为宏定义，信道为2，加密方式为WPA_WPA2_PSK.
+        ESP01_SendCommand(cmd, "OK", 10000);//发送格式化的AT指令字符串。因为这次指令要启用WIFI，超时长些
+        ESP01_SendCommand("AT+CIPMUX=1", "OK", AT_TIMEOUT_MS); // 多连接模式
         // 启动TCP服务器
         snprintf(cmd, sizeof(cmd), "AT+CIPSERVER=1,%d", TCP_SERVER_PORT);
         ESP01_SendCommand(cmd, "OK", AT_TIMEOUT_MS);
@@ -160,14 +161,23 @@ static void ParseIPDPacket(uint8_t* data, uint16_t len) {
     // 格式: +IPD,<conn_id>,<len>:<data>
     char* ptr = strstr((char*)data, "+IPD");
     if(ptr == NULL) return;
+    if(IsMaster) {
+        uint8_t conn_id = atoi(ptr + 5); // 跳过"+IPD,"
+        char* len_start = strchr(ptr, ',') + 1;
+        uint16_t data_len = atoi(len_start);
+        char* data_start = strchr(ptr, ':') + 1;
 
-    uint8_t conn_id = atoi(ptr + 5); // 跳过"+IPD,"
-    char* len_start = strchr(ptr, ',') + 1;
-    uint16_t data_len = atoi(len_start);
-    char* data_start = strchr(ptr, ':') + 1;
+        if(data_callback != NULL && data_len > 0) {
+            data_callback(conn_id, (uint8_t*)data_start, data_len);
+        }
+    }
+    else {//从机的单连接模式下+IPD数据包格式有所不同
+        uint16_t data_len = atoi(ptr + 5); // 跳过"+IPD,"
+        char* data_start = strchr(ptr, ':') + 1;
 
-    if(data_callback != NULL && data_len > 0) {
-        data_callback(conn_id, (uint8_t*)data_start, data_len);
+        if(data_callback != NULL && data_len > 0) {
+            data_callback(0, (uint8_t*)data_start, data_len);
+        }
     }
 }
 
@@ -179,8 +189,12 @@ void ESP01_SetDataCallback(DataReceivedCallback callback) {
 // 发送TCP数据
 void ESP01_SendTCPData(uint8_t conn_id, uint8_t* data, uint16_t len) {
     char cmd[32];
-    snprintf(cmd, sizeof(cmd), "AT+CIPSEND=%d,%d", conn_id, len);
-
+    if(IsMaster) {//主机多连接
+        snprintf(cmd, sizeof(cmd), "AT+CIPSEND=%d,%d", conn_id, len);
+    }
+    else {//丛机单连接，此时conn_id随便填写即可
+        snprintf(cmd, sizeof(cmd), "AT+CIPSEND=%d", len);
+    }
     if(ESP01_SendCommand(cmd, ">", 1000) == ESP01_OK) {
         HAL_UART_Transmit(esp_huart, data, len, HAL_MAX_DELAY);
     }
