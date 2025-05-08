@@ -114,6 +114,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  DelayUs_Init();
   //keyboard_init();
  //mpu6050_bridge_init(&hi2c1);
   MPU6050_DMP_Init();
@@ -145,7 +146,9 @@ int main(void)
 
 
   //ESP01 串口转WIFI模块初始化
+  HAL_UART_Transmit(&huart3,"ESP01 initializing",sizeof("ESP01 initializing"),100);
   ESP01_Init(&huart2,0);
+  HAL_UART_Transmit(&huart3,"ESP01 initialized",sizeof("ESP01 initialized"),100);
   //设置用来处理接收到的信息的回调函数
   ESP01_SetDataCallback(MasterESPDataHandler);
 
