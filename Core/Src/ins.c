@@ -124,11 +124,11 @@ void ins_update_pos(float ax, float ay, float az, float DT) {
     ay -= gravity_delta.y;
     az -= gravity_delta.z;
     //对于加速度小于0.02g(即0.2m/s2)的情况，加速度视为0
-    if(fabsf(ax) < 0.02f)
+    if(fabsf(ax) < 0.01f)
         ax = 0;
-    if(fabsf(ay) < 0.02f)
+    if(fabsf(ay) < 0.01f)
         ay = 0;
-    if(fabsf(az) < 0.02f)
+    if(fabsf(az) < 0.01f)
         az = 0;
     //将上一时刻速度转换到设备坐标系
     Vector3 current_velocity = quaternion_cast_to_device(vel);
