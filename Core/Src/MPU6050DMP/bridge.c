@@ -3,8 +3,9 @@
 //
 
 #include "bridge.h"
-#include "i2c.h"
+//#include "i2c.h"
 #include "i2c_sim.h"
+//#include "i2c_sim.c"
 
 //I2C_HandleTypeDef* hi2c1;
 void mpu6050_bridge_init(I2C_HandleTypeDef* hi2c) {
@@ -12,15 +13,16 @@ void mpu6050_bridge_init(I2C_HandleTypeDef* hi2c) {
 }
 
 uint8_t mpu6050_write(uint8_t addr, uint8_t reg, uint8_t len, uint8_t* buf){
-  HAL_I2C_Mem_Write(&hi2c1, 0xD0, reg , I2C_MEMADD_SIZE_8BIT , buf, len ,100);
+  //HAL_I2C_Mem_Write(&hi2c1, 0xD0, reg , I2C_MEMADD_SIZE_8BIT , buf, len ,100);
+  I2C_Sim_Mem_Write(&i2cs1, 0xD0>>1, reg , I2C_MEMADD_SIZE_8BIT , buf, len);
   return 0;
-  return (HAL_I2C_Mem_Write(&hi2c1, 0xD0, reg , I2C_MEMADD_SIZE_8BIT , buf, len ,100) == HAL_OK)?0:-1;
+  //return (HAL_I2C_Mem_Write(&hi2c1, 0xD0, reg , I2C_MEMADD_SIZE_8BIT , buf, len ,100) == HAL_OK)?0:-1;
 }
 
 uint8_t mpu6050_read(uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf){
-  HAL_I2C_Mem_Read(&hi2c1, 0xD0, reg, I2C_MEMADD_SIZE_8BIT, buf, len, 100);
+  I2C_Sim_Mem_Read(&i2cs1, 0xD0>>1, reg, I2C_MEMADD_SIZE_8BIT, buf, len);
   return 0;
-  return (HAL_I2C_Mem_Read(&hi2c1, 0xD0, reg, I2C_MEMADD_SIZE_8BIT, buf, len, 100) == HAL_OK)?0:-1;
+  //return (HAL_I2C_Mem_Read(&hi2c1, 0xD0, reg, I2C_MEMADD_SIZE_8BIT, buf, len, 100) == HAL_OK)?0:-1;
 }
 void mpu6050_write_reg(uint8_t reg, uint8_t dat)
 {

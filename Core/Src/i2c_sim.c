@@ -3,6 +3,8 @@
 //
 
 #include "i2c_sim.h"
+
+
 /* 初始化GPIO */
 /* 初始化GPIO */
 void I2C_Sim_Init(I2C_Sim_HandleTypeDef *hi2c) {

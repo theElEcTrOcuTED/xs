@@ -5,8 +5,11 @@
 #ifndef I2C_SIM_H
 #define I2C_SIM_H
 /* 模拟I2C驱动头文件 (i2c_sim.h) */
+
 #include "stm32f1xx_hal.h"
 #include "delay.h"
+
+
 typedef struct {
     GPIO_TypeDef *SDA_GPIOx;
     uint16_t SDA_GPIO_Pin;
@@ -14,7 +17,7 @@ typedef struct {
     uint16_t SCL_GPIO_Pin;
     uint32_t Timeout;  // 超时时间（单位：ms）
 } I2C_Sim_HandleTypeDef;
-
+I2C_Sim_HandleTypeDef i2cs1;
 /* 函数声明 */
 void I2C_Sim_Init(I2C_Sim_HandleTypeDef *hi2c);
 HAL_StatusTypeDef I2C_Sim_Mem_Write(I2C_Sim_HandleTypeDef *hi2c, uint16_t DevAddress, uint16_t MemAddress, uint16_t MemAddSize, uint8_t *pData, uint16_t Size);

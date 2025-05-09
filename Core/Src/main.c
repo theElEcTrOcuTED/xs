@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
-#include "i2c.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -37,6 +36,7 @@
 #include "ins.h"
 #include "MPU6050DMP/inv_mpu.h"
 #include "debug_usart.h"
+#include "i2c_sim.h"
 #include "keyboard.h"
 
 //#include "BLE/atk_mw579.h"
@@ -122,11 +122,17 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_I2C1_Init();
   MX_TIM2_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  i2cs1.Timeout = 100;
+  i2cs1.SCL_GPIOx = GPIOB;
+  i2cs1.SDA_GPIOx = GPIOB;
+  i2cs1.SCL_GPIO_Pin = GPIO_PIN_8;
+  i2cs1.SDA_GPIO_Pin = GPIO_PIN_9;
+  I2C_Sim_Init(&i2cs1);
+
   DelayUs_Init();
   //keyboard_init();
  //mpu6050_bridge_init(&hi2c1);
@@ -305,7 +311,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     if(g_th!=0 && sqrtf(gx*gx+gy*gy+gz*gz)>g_th) {
       //TODO:角速度超出阈值报警
     }
-    //debug_usart_send(data);//发送调试数据
+    debug_usart_send(data);//发送调试数据
     //构建数据包
     uint8_t buffer[89];
     //索引0 - 4 ： 数据包头
