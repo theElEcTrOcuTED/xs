@@ -21,4 +21,6 @@ void ins_update_current_quaternion(float q0, float q1, float q2, float q3);
 void ins_get_position(float *px, float *py, float *pz);
 void ins_get_velocity(float *vx, float *vy, float *vz);
 void ins_init(Attitude_Mode mode, float v0X, float v0Y, float v0Z, float gravityAcc);
+//获取INS系统目前存储的上一时刻的在大地坐标系下的加速度信息。
+void ins_get_acceleration_ground(float *ax, float *ay, float *az);
 #endif //INS_H

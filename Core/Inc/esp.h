@@ -16,7 +16,7 @@
 #define WIFI_SSID       "suibian"    // WiFi名称
 #define WIFI_PASSWORD   "suibian123"    // WiFi密码
 #define TCP_SERVER_PORT 8080           // TCP服务器端口
-#define AT_TIMEOUT_MS   3000           // AT指令默认超时时间
+#define AT_TIMEOUT_MS   4000           // AT指令默认超时时间
 #define MAX_RETRY       3              // 指令重试次数
 
 // 回调函数类型定义

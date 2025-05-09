@@ -67,6 +67,17 @@ EulerAngle eulerAngle;//MPU6050 当前欧拉角*/
 //从机ID
 const int SLAVE_ID = 1;
 
+
+//设置为0代表禁用报警功能
+//设定的姿态角阈值
+float pitch_th = 0;
+float roll_th = 0;
+float yaw_th = 0;
+//速度阈值
+float v_th = 0;
+//三轴合角速度阈值
+float g_th = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -129,7 +140,13 @@ int main(void)
   delay_ms(1000);    //这一句有问题
   float ax,ay,az;
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
+  for(int i = 0 ; i < 3 ; i++) {
+    delay_ms(1000);
+  }
   MPU6050_DMP_get_accel(&ax,&ay,&az);
+  ax/=10000;
+  ay/=10000;
+  az/=10000;
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
   ins_init(ATTITUDE_MODE_QUATERNION,0,0,0,sqrtf(ax*ax+ay*ay+az*az));
 
@@ -138,7 +155,7 @@ int main(void)
 
 
   //串口调试初始化
-  debug_usart_init(6,&huart3,100);
+  debug_usart_init(18,&huart3,500);
   float number[] ={0,1,2,3};
  // HAL_UART_Transmit(&huart3,(uint8_t*)number,sizeof(float)*4,100);
   //debug_usart_send(number);
@@ -214,16 +231,31 @@ void SystemClock_Config(void)
 
 //NVIC中断服务函数
 
+long long ct = 1;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
   //TIM2定时器中断，触发频率100Hz，用于更新姿态
   if(htim->Instance==TIM2) {
     //更新当前姿态
+  /*
+    if(ct==0)
+      ct=1;
+    else if(ct==1)
+      ct=2;
+    else if(ct==2)
+      ct=3;
+    else
+      ct=0;*/
+    ct+=1;
     float q0,q1,q2,q3;
     float ax,ay,az,gx,gy,gz;
     float pitch,yaw,roll;
-
+    //在大地坐标系下的三轴加速度
+    float ax_g,ay_g,az_g;
     int a =  MPU6050_DMP_Get_Data_quaternion(&q0,&q1,&q2,&q3);
     MPU6050_DMP_get_accel(&ax,&ay,&az);
+    ax/=10000;
+    ay/=10000;
+    az/=10000;
     MPU6050_DMP_get_gyro(&gx,&gy,&gz);
     //MPU6050_DMP_Get_Data_euler(&pitch,&roll,&yaw);
     pitch = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3;	// pitch
@@ -235,32 +267,109 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     float vx,vy,vz;
     ins_get_position(&posx,&posy,&posz);
     ins_get_velocity(&vx,&vy,&vz);
-    float data[6]={
+    ins_get_acceleration_ground(&ax_g,&ay_g,&az_g);
+    float data[18]={
       pitch,
       roll,
       yaw,
-      q0,
-      q1,
-      q2,
+      ax,
+      ay,
+      az,
+      ax_g,
+      ay_g,
+      az_g,
+      gx,
+      gy,
+      gz,
+      posx,
+      posy,
+      posz,
+      vx,
+      vy,
+      vz
     };
-    debug_usart_send(data);//发送调试数据
+    if(pitch_th!=0 && pitch>pitch_th) {
+      //TODO:俯仰角超出阈值报警
+    }
+    if(roll_th!=0 && roll>roll_th) {
+      //TODO:滚转角超出阈值报警
+    }
+    if(yaw_th!=0 && yaw>yaw_th) {
+      //TODO:偏航角超出阈值报警
+    }
+    if(v_th!=0 && sqrtf(vx*vx+vy*vy+vz*vz)>v_th) {
+      //TODO:速度超出阈值报警
+    }
+    if(g_th!=0 && sqrtf(gx*gx+gy*gy+gz*gz)>g_th) {
+      //TODO:角速度超出阈值报警
+    }
+    //debug_usart_send(data);//发送调试数据
     //构建数据包
-    uint8_t buffer[42];
+    uint8_t buffer[89];
+    //索引0 - 4 ： 数据包头
     memcpy(buffer,">HEAD",5);
+    //索引 5 - 8:：从机（下位机）ID,int
     memcpy(buffer+5,&SLAVE_ID,4);
+    //索引 9 - 20: 欧拉角
     memcpy(buffer+9,&pitch,4);
     memcpy(buffer+13,&yaw,4);
     memcpy(buffer+17,&roll,4);
+    //索引21 - 36 ：四元数
     memcpy(buffer+21,&q0,4);
     memcpy(buffer+25,&q1,4);
     memcpy(buffer+29,&q2,4);
     memcpy(buffer+33,&q3,4);
-    memcpy(buffer+37,">END",4);
+    //索引37 - 48 ：三轴加速度
+    memcpy(buffer+37,&ax,4);
+    memcpy(buffer+41,&ay,4);
+    memcpy(buffer+45,&az,4);
+    //索引49 - 57 ：三轴速度
+    memcpy(buffer+49,&vx,4);
+    memcpy(buffer+53,&vy,4);
+    memcpy(buffer+57,&vz,4);
+    //索引61 - 72：位置
+    memcpy(buffer+61,&posx,4);
+    memcpy(buffer+65,&posy,4);
+    memcpy(buffer+69,&posz,4);
+    //索引73 - 84：三轴角速度
+    memcpy(buffer+73,&gx,4);
+    memcpy(buffer+77,&gy,4);
+    memcpy(buffer+81,&gz,4);
+    //索引85 - 88：数据包尾
+    memcpy(buffer+85,">END",4);
+    if(ct%100==0)
+      ESP01_SendTCPData(0,buffer,89);
   }
 
 }
 //自定义的主机的接+IPD消息处理函数
 void MasterESPDataHandler(uint8_t conn_id, uint8_t* data, uint16_t len){
+  //设定阈值的数据包格式：
+  /*
+   * >HEAD 数据包头
+   * 姿态角阈值：
+   * pitch_th 4bytes(float)
+   * yaw_th 4bytes(float)
+   * roll_th  4bytes(float)
+   * 速度阈值：
+   * v_th  4bytes(float)
+   * 角速度阈值：
+   * g_th  4bytes(float)
+   */
+  char* loc = strstr((char*)data,">HEAD");
+  if(loc != NULL) {
+    loc+=5;//指针移动到>HEAD的数据包头标记的后面
+    //更新角度阈值
+    memcpy(&pitch_th,loc,4);
+    memcpy(&roll_th,loc+4,4);
+    memcpy(&yaw_th,loc+8,4);
+    memcpy(&v_th,loc+12,4);
+    memcpy(&g_th,loc+16,4);
+  }
+  else {
+    //指针解引用错误，未找到数据包头
+    HAL_UART_Transmit(&huart3,"ERROR:CANNOT PARSE RECEIVED PACKET:>HEAD NOT FOUND",sizeof("ERROR:CANNOT PARSE RECEIVED PACKET:>HEAD NOT FOUND"),100);
+  }
 }
 /* USER CODE END 4 */
 

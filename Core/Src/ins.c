@@ -24,6 +24,8 @@ typedef struct {
     float z;
 } Vector3; //辅助结构体：三维向量
 
+
+const float G = 9.80665f;
 Attitude_Mode attitudeMode; //表示当前工作状态
 Quaternion current_quaternion; //当前姿态（四元数形式）
 EulerAngle current_eulerangle; //当前姿态（欧拉角模式）
@@ -31,6 +33,10 @@ EulerAngle current_eulerangle; //当前姿态（欧拉角模式）
 Vector3 v0;//初速度（大地坐标系下）
 Vector3 pos;//当前速度（大地坐标系下）
 Vector3 vel;//当前位置（大地坐标系下）
+
+Vector3 acc_gnd;//在大地坐标系下的当前加速度
+
+
 float gravity;//重力大小的绝对值
 
 
@@ -71,6 +77,7 @@ Vector3 quaternion_cast_to_device(Vector3 v3) {
 }
 
 Vector3 euler_cast_to_device() {
+
 }
 
 Vector3 quaternion_cast_to_ground(Vector3 v3) {
@@ -110,7 +117,7 @@ void ins_update_current_euler(float pitch, float roll, float yaw) {
 
 void ins_update_pos(float ax, float ay, float az, float DT) {
     //先将用姿态角估计的重力分量转换到设备坐标系
-    Vector3 gtemp = {0,0,-1*gravity};
+    Vector3 gtemp = {0,0,gravity};
     Vector3 gravity_delta = quaternion_cast_to_device(gtemp);
     //在设备坐标系下，去除重力分量
     ax -= gravity_delta.x;
@@ -118,10 +125,13 @@ void ins_update_pos(float ax, float ay, float az, float DT) {
     az -= gravity_delta.z;
     //将上一时刻速度转换到设备坐标系
     Vector3 current_velocity = quaternion_cast_to_device(vel);
+    //同时计算出当前时刻在大地坐标系下的加速度
+    Vector3 a_bef = {ax*G,ay*G,az*G};
+    acc_gnd = quaternion_cast_to_ground(a_bef);//变换到大地坐标系并更新数值
     //在设备坐标系下，将加速度积分到速度
-    current_velocity.x += ax * DT;
-    current_velocity.y += ay * DT;
-    current_velocity.z += az * DT;
+    current_velocity.x += ax * G * DT;
+    current_velocity.y += ay * G * DT;
+    current_velocity.z += az * G * DT;
     //将上一时刻位移转换到设备坐标系
     Vector3 current_position = quaternion_cast_to_device(pos);
     //在设备坐标系下，将速度积分到位移
@@ -141,5 +151,9 @@ void ins_get_position(float *px, float *py, float *pz) {
     *px = pos.x;
     *py = pos.y;
     *pz = pos.z;
-
+}
+void ins_get_acceleration_ground(float *ax, float *ay, float *az) {
+    *ax = acc_gnd.x;
+    *ay = acc_gnd.y;
+    *az = acc_gnd.z;
 }
