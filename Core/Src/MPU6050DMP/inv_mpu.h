@@ -137,7 +137,8 @@ uint8_t MPU6050_DMP_Get_Data_quaternion(float *q0,float *q1,float *q2, float *q3
 
 void MPU6050_DMP_get_accel(float *ax,float *ay,float *az);
 void MPU6050_DMP_get_gyro(float *gx,float *gy,float *gz);
-
+//void MPU6050_Enhanced_ReadRawData( int16_t *accel, int16_t *gyro, int16_t *temp);
+void MPU6050_Enhanced_ReadProcessedData(float *ax,float *ay,float *az,float *gx,float *gy,float *gz);
 
 #endif  /* #ifndef _INV_MPU_H_ */
 

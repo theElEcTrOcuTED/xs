@@ -2983,15 +2983,19 @@ void MPU6050_DMP_get_accel(float *ax,float *ay,float *az) {
     unsigned short fsr;
     switch (st.chip_cfg.accel_fsr) {
         case INV_FSR_2G:
+            //fsr = 16384;
             fsr = 2;
         break;
         case INV_FSR_4G:
+            //fsr = 8192;
             fsr = 4;
         break;
         case INV_FSR_8G:
+            //fsr = 4096;
             fsr = 8;
         break;
         case INV_FSR_16G:
+            //fsr = 2048;
             fsr = 16;
         break;
     }
@@ -3010,4 +3014,94 @@ void MPU6050_DMP_get_gyro(float *gx,float *gy,float *gz) {
     *gx = (float)gyro[0] / fsr;
     *gy = (float)gyro[1] / fsr;
     *gz = (float)gyro[2] / fsr;
+}
+
+
+
+
+
+/**
+ * 向指定缓存读取MPU6050的基本数据（角速度、加速度、温度）。
+ * @param hmpu 要读取的MPU6050实例结构体。
+ * @param accel 要读取到的加速度缓冲结构体指针。
+ * @param gyro 要读取到的角速度缓冲结构体指针。
+ * @param temp 要读取到的温度缓冲结构体指针。
+ */
+void MPU6050_Enhanced_ReadRawData( int16_t *accel, int16_t *gyro, int16_t *temp) {
+    uint8_t buffer[14];
+
+    // 读取所有传感器数据寄存器
+    mpu6050_read( st.hw->addr, ACCEL_XOUT_H,  14,buffer);
+    // 组合加速度计数据
+    accel[0] = (int16_t)((buffer[0] << 8) | buffer[1]);
+    accel[1] = (int16_t)((buffer[2] << 8) | buffer[3]);
+    accel[2] = (int16_t)((buffer[4] << 8) | buffer[5]);
+
+    // 温度数据
+    *temp = (int16_t)((buffer[6] << 8) | buffer[7]);
+
+    // 组合陀螺仪数据
+    gyro[0] = (int16_t)((buffer[8] << 8) | buffer[9]);
+    gyro[1] = (int16_t)((buffer[10] << 8) | buffer[11]);
+    gyro[2] = (int16_t)((buffer[12] << 8) | buffer[13]);
+}
+/**
+ * 读取处理后的，封装后的MPU6050的基本数据（角速度、加速度、温度）。加速度单位为g，角速度单位°/s
+ * 这个函数读取到的数据是已经经过零点校正后的数据。
+ * ！！注意！！不校正加速度计Z轴的数据！！
+ * @param hmpu 要读取的MPU6050实例结构体。
+ * @param data 要读取到的数据结构体缓冲指针。
+ */
+void MPU6050_Enhanced_ReadProcessedData(float *ax,float *ay,float *az,float *gx,float *gy,float *gz) {
+    int16_t accelRaw[3], gyroRaw[3], tempRaw;
+
+    MPU6050_Enhanced_ReadRawData(accelRaw, gyroRaw, &tempRaw);
+
+    float g_fsr,a_fsr;
+    switch (st.chip_cfg.gyro_fsr) {
+        case INV_FSR_250DPS:
+            g_fsr = 131.0f;
+        break;
+        case INV_FSR_500DPS:
+            g_fsr = 65.5f;
+        break;
+        case INV_FSR_1000DPS:
+            g_fsr = 32.8f;
+        break;
+        case INV_FSR_2000DPS:
+            g_fsr = 16.4f;
+        break;
+    }
+    switch (st.chip_cfg.accel_fsr) {
+        case INV_FSR_2G:
+            a_fsr = 16384.0f;
+        //fsr = 2;
+        break;
+        case INV_FSR_4G:
+            a_fsr = 8192.0f;
+        //fsr = 4;
+        break;
+        case INV_FSR_8G:
+            a_fsr = 4096.0f;
+        //fsr = 8;
+        break;
+        case INV_FSR_16G:
+            a_fsr = 2048.0f;
+        //fsr = 16;
+        break;
+    }
+
+
+    // 转换加速度计数据
+    *ax = (float)accelRaw[0] / a_fsr;
+    *ay = (float)accelRaw[1] / a_fsr;
+    *az = (float)accelRaw[2] / a_fsr;
+
+    // 转换陀螺仪数据
+    *gx = (float)gyroRaw[0] / g_fsr;
+    *gy = (float)gyroRaw[1] / g_fsr;
+    *gz = (float)gyroRaw[2] / g_fsr;
+
+    // 转换温度数据
+    //data->Temp = (float)tempRaw / 340.0 + 36.53;
 }

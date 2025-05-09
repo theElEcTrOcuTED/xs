@@ -3,7 +3,7 @@
 //
 
 #include "ins.h"
-
+#include "math.h"
 //https://www.cnblogs.com/WangHongxi/p/12357230.html
 typedef struct {
     float q0;
@@ -123,6 +123,13 @@ void ins_update_pos(float ax, float ay, float az, float DT) {
     ax -= gravity_delta.x;
     ay -= gravity_delta.y;
     az -= gravity_delta.z;
+    //对于加速度小于0.02g(即0.2m/s2)的情况，加速度视为0
+    if(fabsf(ax) < 0.02f)
+        ax = 0;
+    if(fabsf(ay) < 0.02f)
+        ay = 0;
+    if(fabsf(az) < 0.02f)
+        az = 0;
     //将上一时刻速度转换到设备坐标系
     Vector3 current_velocity = quaternion_cast_to_device(vel);
     //同时计算出当前时刻在大地坐标系下的加速度

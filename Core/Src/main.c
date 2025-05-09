@@ -73,7 +73,7 @@ const int SLAVE_ID = 1;
 //设定的姿态角阈值
 float pitch_th = 0;
 float roll_th = 0;
-float yaw_th = 0;
+float yaw_th = 60;
 //速度阈值
 float v_th = 0;
 //三轴合角速度阈值
@@ -146,15 +146,12 @@ int main(void)
   //MPU6050_DMP_Init();
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
 
-  float ax,ay,az;
+  float ax,ay,az,gx,gy,gz;
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
-  for(int i = 0 ; i < 3 ; i++) {
+  for(int i = 0 ; i < 15 ; i++) {
     delay_ms(1000);
   }
-  MPU6050_DMP_get_accel(&ax,&ay,&az);
-  ax/=10000;
-  ay/=10000;
-  az/=10000;
+  MPU6050_Enhanced_ReadProcessedData(&ax,&ay,&az,&gx,&gy,&gz);
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
   ins_init(ATTITUDE_MODE_QUATERNION,0,0,0,sqrtf(ax*ax+ay*ay+az*az));
 
@@ -259,18 +256,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     float pitch,yaw,roll;
     //在大地坐标系下的三轴加速度
     float ax_g,ay_g,az_g;
-    int a =  MPU6050_DMP_Get_Data_quaternion(&q0,&q1,&q2,&q3);
+    MPU6050_DMP_Get_Data_quaternion(&q0,&q1,&q2,&q3);
+
+    /*
     MPU6050_DMP_get_accel(&ax,&ay,&az);
     ax/=10000;
     ay/=10000;
     az/=10000;
     MPU6050_DMP_get_gyro(&gx,&gy,&gz);
+    */
+    MPU6050_Enhanced_ReadProcessedData(&ax,&ay,&az,&gx,&gy,&gz);
+
     //MPU6050_DMP_Get_Data_euler(&pitch,&roll,&yaw);
-    pitch = asin(-2 * q1 * q3 + 2 * q0* q2)* 57.3;	// pitch
-    roll  = atan2(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3;	// roll
-    yaw   = atan2(2*(q1*q2 + q0*q3),q0*q0+q1*q1-q2*q2-q3*q3) * 57.3;	//yaw
+    pitch = asinf(-2 * q1 * q3 + 2 * q0* q2)* 57.3;	// pitch
+    roll  = atan2f(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3;	// roll
+    yaw   = atan2f(2*(q1*q2 + q0*q3),q0*q0+q1*q1-q2*q2-q3*q3) * 57.3;	//yaw
     ins_update_current_quaternion(q0,q1,q2,q3);
-    ins_update_pos(ax,ay,az,1.0f/100);
+    ins_update_pos(ax,ay,az,1.0f/200);
     float posx,posy,posz;
     float vx,vy,vz;
     ins_get_position(&posx,&posy,&posz);
@@ -289,27 +291,39 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
       gx,
       gy,
       gz,
-      posx,
-      posy,
-      posz,
-      vx,
+      q0,
+      q1,
+      q2,
+      q3,
       vy,
       vz
     };
+    int exceedTh = 0;
     if(pitch_th!=0 && pitch>pitch_th) {
       //TODO:俯仰角超出阈值报警
+      exceedTh = 1;
     }
     if(roll_th!=0 && roll>roll_th) {
       //TODO:滚转角超出阈值报警
+      exceedTh = 1;
     }
     if(yaw_th!=0 && yaw>yaw_th) {
       //TODO:偏航角超出阈值报警
+      exceedTh = 1;
     }
     if(v_th!=0 && sqrtf(vx*vx+vy*vy+vz*vz)>v_th) {
+      exceedTh = 1;
       //TODO:速度超出阈值报警
     }
     if(g_th!=0 && sqrtf(gx*gx+gy*gy+gz*gz)>g_th) {
+      exceedTh = 1;
       //TODO:角速度超出阈值报警
+    }
+    if(exceedTh) {
+      HAL_GPIO_WritePin(GPIOA,GPIO_PIN_9,GPIO_PIN_SET);
+    }
+    else {
+      HAL_GPIO_WritePin(GPIOA,GPIO_PIN_9,GPIO_PIN_RESET);
     }
     debug_usart_send(data);//发送调试数据
     //构建数据包
@@ -345,8 +359,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     memcpy(buffer+81,&gz,4);
     //索引85 - 88：数据包尾
     memcpy(buffer+85,">END",4);
-      if(ct%5==0)
+    if(ct%2==0) {
       ESP01_SendTCPData(0,buffer,89);
+    }
   }
 
 }
