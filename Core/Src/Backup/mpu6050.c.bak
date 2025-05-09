@@ -8,6 +8,8 @@
 #include <string.h>
 #include <../Inc/usart.h>
 
+
+
 // 加速度计量程分辨率 (LSB/g)
 static const float aRes[] = {
     16384.0, // ±2g

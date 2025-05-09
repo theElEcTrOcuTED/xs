@@ -319,7 +319,7 @@ void ESP01_SendTCPData(uint8_t conn_id, uint8_t* data, uint16_t len) {
     snprintf(cmd, sizeof(cmd), "AT+CIPSEND=%d", len);
     ESP01_Status st = ESP01_SendCommand(cmd, ">", 1000);
     if(st == ESP01_OK) {
-        HAL_UART_Transmit(esp_huart, data, len, 100);
+        HAL_UART_Transmit_DMA(esp_huart, data, len);
     }
     else if(st==ESP01_ERROR) {
         HAL_UART_Transmit(&huart3,"CIPSEND Command Error",sizeof("CIPSEND Command Error"),100);

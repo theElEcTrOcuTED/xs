@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "dma.h"
 #include "i2c.h"
 #include "tim.h"
 #include "usart.h"
@@ -120,6 +121,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_I2C1_Init();
   MX_TIM2_Init();
   MX_USART2_UART_Init();
@@ -137,7 +139,7 @@ int main(void)
   }*/
   //MPU6050_DMP_Init();
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
-  delay_ms(1000);    //这一句有问题
+
   float ax,ay,az;
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
   for(int i = 0 ; i < 3 ; i++) {
@@ -337,7 +339,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     memcpy(buffer+81,&gz,4);
     //索引85 - 88：数据包尾
     memcpy(buffer+85,">END",4);
-    if(ct%100==0)
+      if(ct%5==0)
       ESP01_SendTCPData(0,buffer,89);
   }
 

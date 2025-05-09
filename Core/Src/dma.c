@@ -1,9 +1,9 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    gpio.c
+  * @file    dma.c
   * @brief   This file provides code for the configuration
-  *          of all used GPIO pins.
+  *          of all the requested memory to memory DMA transfers.
   ******************************************************************************
   * @attention
   *
@@ -19,47 +19,40 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "gpio.h"
+#include "dma.h"
 
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
 
 /*----------------------------------------------------------------------------*/
-/* Configure GPIO                                                             */
+/* Configure DMA                                                              */
 /*----------------------------------------------------------------------------*/
+
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
 
-/** Configure pins as
-        * Analog
-        * Input
-        * Output
-        * EVENT_OUT
-        * EXTI
-*/
-void MX_GPIO_Init(void)
+/**
+  * Enable DMA controller clock
+  */
+void MX_DMA_Init(void)
 {
 
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
 
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : PA9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  /* DMA interrupt init */
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  /* DMA1_Channel7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
 
 }
 
 /* USER CODE BEGIN 2 */
 
 /* USER CODE END 2 */
+

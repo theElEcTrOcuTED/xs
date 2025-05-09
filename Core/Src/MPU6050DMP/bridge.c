@@ -4,6 +4,8 @@
 
 #include "bridge.h"
 #include "i2c.h"
+#include "i2c_sim.h"
+
 //I2C_HandleTypeDef* hi2c1;
 void mpu6050_bridge_init(I2C_HandleTypeDef* hi2c) {
  // hi2c1 = hi2c;
