@@ -270,7 +270,7 @@ void ESP01_ProcessReceivedData(void) {
         // 检测IPD数据包
         if(data == '+') {
             if(packet_index >= 5 &&
-               memcmp(&packet_buffer[packet_index-4], "+IPD", 4) == 0) {
+                memcmp(&packet_buffer[packet_index-4], "+IPD", 4) == 0) {
                 ParseIPDPacket(packet_buffer, packet_index);
                 packet_index = 0;
             }
@@ -280,12 +280,15 @@ void ESP01_ProcessReceivedData(void) {
         if(packet_index >= sizeof(packet_buffer)) {
             packet_index = 0; // 防止溢出
         }
+        HAL_UART_Transmit(&huart3,packet_buffer,256,150);
     }
 }
 
 // 解析IPD数据包
 static void ParseIPDPacket(uint8_t* data, uint16_t len) {
     // 格式: +IPD,<conn_id>,<len>:<data>
+    HAL_UART_Transmit(&huart3,"+IPD Packet detected",sizeof("+IPD Packet detected"),150);
+
     char* ptr = strstr((char*)data, "+IPD");
     if(ptr == NULL) return;
     if(IsMaster) {

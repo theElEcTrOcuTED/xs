@@ -74,8 +74,8 @@ const int SLAVE_ID = 1;
 float pitch_th = 0;
 float roll_th = 0;
 float yaw_th = 60;
-//速度阈值
-float v_th = 0;
+//加速度阈值
+float a_th = 0;
 //三轴合角速度阈值
 float g_th = 0;
 
@@ -148,9 +148,9 @@ int main(void)
 
   float ax,ay,az,gx,gy,gz;
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
-  for(int i = 0 ; i < 15 ; i++) {
+
     delay_ms(1000);
-  }
+
   MPU6050_Enhanced_ReadProcessedData(&ax,&ay,&az,&gx,&gy,&gz);
   HAL_UART_Transmit(&huart3,"123",sizeof("123"),100);
   ins_init(ATTITUDE_MODE_QUATERNION,0,0,0,sqrtf(ax*ax+ay*ay+az*az));
@@ -183,6 +183,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    HAL_UART_Transmit(&huart3,"main cycle_1",sizeof("main cycle_1"),100);
     /* USER CODE END WHILE */
     ESP01_ProcessReceivedData();
     /* USER CODE BEGIN 3 */
@@ -311,9 +312,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
       //TODO:偏航角超出阈值报警
       exceedTh = 1;
     }
-    if(v_th!=0 && sqrtf(vx*vx+vy*vy+vz*vz)>v_th) {
+    if(a_th!=0 && sqrtf(ax*ax+ay*ay+az*az)>a_th) {
       exceedTh = 1;
-      //TODO:速度超出阈值报警
+      //TODO:加速度超出阈值报警
     }
     if(g_th!=0 && sqrtf(gx*gx+gy*gy+gz*gz)>g_th) {
       exceedTh = 1;
@@ -325,11 +326,28 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     else {
       HAL_GPIO_WritePin(GPIOA,GPIO_PIN_9,GPIO_PIN_RESET);
     }
-    debug_usart_send(data);//发送调试数据
+    /*
+    HAL_UART_Transmit(&huart3,"pitch_th:",strlen("pitch_th:"),100);
+    char buffer1[50];
+    sprintf(buffer1, "%f", pitch_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
+    HAL_UART_Transmit(&huart3,"yaw_th:",strlen("yaw_th:"),100);
+    sprintf(buffer1, "%f", yaw_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
+    HAL_UART_Transmit(&huart3,"roll_th:",strlen("roll_th:"),100);
+    sprintf(buffer1, "%f", roll_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
+    HAL_UART_Transmit(&huart3,"a_th:",strlen("a_th:"),100);
+    sprintf(buffer1, "%f", a_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
+    HAL_UART_Transmit(&huart3,"g_th:",strlen("g_th:"),100);
+    sprintf(buffer1, "%f", g_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);*/
+    //debug_usart_send(data);//发送调试数据
     //构建数据包
     uint8_t buffer[89];
     //索引0 - 4 ： 数据包头
-    memcpy(buffer,">HEAD",5);
+    memcpy(buffer,"^HEAD",5);
     //索引 5 - 8:：从机（下位机）ID,int
     memcpy(buffer+5,&SLAVE_ID,4);
     //索引 9 - 20: 欧拉角
@@ -358,7 +376,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     memcpy(buffer+77,&gy,4);
     memcpy(buffer+81,&gz,4);
     //索引85 - 88：数据包尾
-    memcpy(buffer+85,">END",4);
+    memcpy(buffer+85,"^END",4);
     if(ct%2==0) {
       ESP01_SendTCPData(0,buffer,89);
     }
@@ -369,7 +387,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 void MasterESPDataHandler(uint8_t conn_id, uint8_t* data, uint16_t len){
   //设定阈值的数据包格式：
   /*
-   * >HEAD 数据包头
+   * ^HEAD 数据包头
    * 姿态角阈值：
    * pitch_th 4bytes(float)
    * yaw_th 4bytes(float)
@@ -379,19 +397,21 @@ void MasterESPDataHandler(uint8_t conn_id, uint8_t* data, uint16_t len){
    * 角速度阈值：
    * g_th  4bytes(float)
    */
-  char* loc = strstr((char*)data,">HEAD");
+  HAL_UART_Transmit(&huart3,"接收到原始数据如下：",sizeof("接收到原始数据如下："),150);
+  HAL_UART_Transmit(&huart3,data,len,150);
+  char* loc = strstr((char*)data,"^HEAD");
   if(loc != NULL) {
-    loc+=5;//指针移动到>HEAD的数据包头标记的后面
+    loc+=5;//指针移动到^HEAD的数据包头标记的后面
     //更新角度阈值
     memcpy(&pitch_th,loc,4);
     memcpy(&roll_th,loc+4,4);
     memcpy(&yaw_th,loc+8,4);
-    memcpy(&v_th,loc+12,4);
+    memcpy(&a_th,loc+12,4);
     memcpy(&g_th,loc+16,4);
   }
   else {
     //指针解引用错误，未找到数据包头
-    HAL_UART_Transmit(&huart3,"ERROR:CANNOT PARSE RECEIVED PACKET:>HEAD NOT FOUND",sizeof("ERROR:CANNOT PARSE RECEIVED PACKET:>HEAD NOT FOUND"),100);
+    HAL_UART_Transmit(&huart3,"ERROR:CANNOT PARSE RECEIVED PACKET:^HEAD NOT FOUND",sizeof("ERROR:CANNOT PARSE RECEIVED PACKET:^HEAD NOT FOUND"),100);
   }
 }
 /* USER CODE END 4 */
