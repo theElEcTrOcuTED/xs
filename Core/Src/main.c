@@ -66,14 +66,14 @@ AttitudeEstimator attitudeEstimator;//MPU6050 姿态解算结构体
 EulerAngle eulerAngle;//MPU6050 当前欧拉角*/
 
 //从机ID
-const int SLAVE_ID = 1;
+const int SLAVE_ID = 2;
 
 
 //设置为0代表禁用报警功能
 //设定的姿态角阈值
 float pitch_th = 0;
 float roll_th = 0;
-float yaw_th = 60;
+float yaw_th = 0;
 //加速度阈值
 float a_th = 0;
 //三轴合角速度阈值
@@ -414,7 +414,7 @@ void MasterESPDataHandler(uint8_t conn_id, uint8_t* data, uint16_t len){
     memcpy(&yaw_th,loc+8,4);
     memcpy(&a_th,loc+12,4);
     memcpy(&g_th,loc+16,4);
-    /*
+
     HAL_UART_Transmit(&huart3,"pitch_th:",strlen("pitch_th:"),100);
     char buffer1[50];
     sprintf(buffer1, "%f", pitch_th);
@@ -430,7 +430,7 @@ void MasterESPDataHandler(uint8_t conn_id, uint8_t* data, uint16_t len){
     HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
     HAL_UART_Transmit(&huart3,"g_th:",strlen("g_th:"),100);
     sprintf(buffer1, "%f", g_th);
-    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);*/
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
   }
   else {
     //指针解引用错误，未找到数据包头

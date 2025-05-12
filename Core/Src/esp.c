@@ -28,7 +28,7 @@ static DataReceivedCallback data_callback = NULL;
 void UART_RxCpltCallback(UART_HandleTypeDef *huart);
 static ESP01_Status WaitForResponse(const char* expect, uint32_t timeout);
 static void ParseIPDPacket(uint16_t packet_start);
-
+uint16_t tail_temp;
 // 初始化模块
 void ESP01_Init(UART_HandleTypeDef* huart, int isMaster) {
     esp_huart = huart;
@@ -60,53 +60,53 @@ void ESP01_Init(UART_HandleTypeDef* huart, int isMaster) {
     else {*/
         // 发送AT指令初始化序列
         //DEBUG
-        HAL_UART_Transmit(&huart3,"AT-pre",sizeof("AT-pre"),100);
+        //HAL_UART_Transmit(&huart3,"AT-pre",sizeof("AT-pre"),100);
 
 
 
         ESP01_SendCommand("AT", "OK", AT_TIMEOUT_MS);  // 测试AT指令
         //DEBUG
-        HAL_UART_Transmit(&huart3,"AT-after",sizeof("AT-after"),100);
+        //HAL_UART_Transmit(&huart3,"AT-after",sizeof("AT-after"),100);
 
 
 
         //HAL_UART_Transmit(&huart3,"AT+UART=230400,8,1,0,0",sizeof("AT+UART=230400,8,1,0,0"),100);
         if(ESP01_OK!=ESP01_SendCommand("AT+UART=230400,8,1,0,0", "OK", AT_TIMEOUT_MS)) {
-            HAL_UART_Transmit(&huart3,"UARTSET Command Timeout",sizeof("UARTSET Command Timeout"),100);
+            HAL_UART_Transmit(&huart3,"UARTSET Command Error or Timeout",sizeof("UARTSET Command Error or Timeout"),100);
         }
 
 
         if(ESP01_OK!=ESP01_SendCommand("AT+CWMODE=1", "OK", AT_TIMEOUT_MS)) {
-            HAL_UART_Transmit(&huart3,"CWMODE Command Timeout",sizeof("CWMODE Command Timeout"),100);
+            HAL_UART_Transmit(&huart3,"CWMODE Command Error or Timeout",sizeof("CWMODE Command Error or Timeout"),100);
         }// STA模式
-     //   if(ESP01_TIMEOUT==ESP01_SendCommand("AT+RST", "OK", AT_TIMEOUT_MS))//重启生效
-    //    {
-     //       HAL_UART_Transmit(&huart3,"RST Command Timeout",sizeof("RST Command Timeout"),100);
-    //    }
+       if(ESP01_TIMEOUT==ESP01_SendCommand("AT+RST", "OK", AT_TIMEOUT_MS))//重启生效
+       {
+            HAL_UART_Transmit(&huart3,"RST Command Timeout",sizeof("RST Command Timeout"),100);
+        }
      //   delay_ms(1000);//等待重启
         if(ESP01_OK!=ESP01_SendCommand("AT+CIPMUX=0", "OK", AT_TIMEOUT_MS)) // 单连接模式
         {
-            HAL_UART_Transmit(&huart3,"CIPMUX Command Timeout",sizeof("CIPMUX Command Timeout"),100);
+            HAL_UART_Transmit(&huart3,"CIPMUX Command Error or Timeout",sizeof("CIPMUX Command Error or Timeout"),100);
         }
         if(ESP01_OK!=ESP01_SendCommand("AT+CIPMODE=0", "OK", AT_TIMEOUT_MS)) {
-            HAL_UART_Transmit(&huart3,"CIPMODE Command Error",sizeof("CIPMODE Command Error"),100);
+            HAL_UART_Transmit(&huart3,"CIPMODE Command Error or Timeout",sizeof("CIPMODE Command Error or Timeout"),100);
         }
         // 连接WiFi
         char cmd[128];
         //主机IP 192.168.4.2 - 192.168.4.4
-        snprintf(cmd,sizeof(cmd),"AT+CIPSTA=\"%s\"","192.168.4.2");
+        snprintf(cmd,sizeof(cmd),"AT+CIPSTA=\"%s\"","192.168.4.3");
         if(ESP01_OK!=ESP01_SendCommand(cmd, "OK", AT_TIMEOUT_MS)) {
-            HAL_UART_Transmit(&huart3,"CIPSTA Command Timeout",sizeof("CIPSTA Command Timeout"),100);
+            HAL_UART_Transmit(&huart3,"CIPSTA Command Error or Timeout",sizeof("CIPSTA Command Error or Timeout"),100);
         }
         snprintf(cmd, sizeof(cmd), "AT+CWJAP=\"%s\",\"%s\"", WIFI_SSID, WIFI_PASSWORD);
         if(ESP01_OK!=ESP01_SendCommand(cmd, "OK", 10000))//连接指定WIFI。因为这次指令要启用WIFI，所以超时长些
         {
-            HAL_UART_Transmit(&huart3,"CWJAP Command Timeout",sizeof("CWJAP Command Timeout"),100);
+            HAL_UART_Transmit(&huart3,"CWJAP Command Error or Timeout",sizeof("CWJAP Command Error or Timeout"),100);
         }
         // 连接到指定TCP服务器,IP 192.168.4.1，端口为宏定义
         snprintf(cmd,sizeof(cmd),"AT+CIPSTART=\"TCP\",\"192.168.4.1\",%d",TCP_SERVER_PORT);
         if(ESP01_OK!=ESP01_SendCommand(cmd, "OK", 10000)) {
-            HAL_UART_Transmit(&huart3,"CIPSTART Command Timeout",sizeof("CIPSTART Command Timeout"),100);
+            HAL_UART_Transmit(&huart3,"CIPSTART Command Error or Timeout",sizeof("CIPSTART Command Error or Timeout"),100);
         }
             //HAL_UART_Transmit(esp_huart,"AT+CIPSEND\r\n",sizeof("AT+CIPSEND\r\n"),100);
     /*}*/
@@ -218,7 +218,6 @@ static ESP01_Status WaitForResponse(const char* expect, uint32_t timeout_ms) {
         uint16_t index = 0;
 
         for (uint32_t retry = 0; retry < max_retry; retry++) {
-            uint16_t tail_temp = rx_buffer.tail;
             bytes_available = (rx_buffer.head - tail_temp  + RING_BUFFER_SIZE) % RING_BUFFER_SIZE;
 
             while (bytes_available-- > 0) {
@@ -264,8 +263,9 @@ void ESP01_ProcessReceivedData(void) {
     static uint8_t header_buffer[4] = {0};
     char str[20];
     sprintf(str,"%d",bytes_available);
-    HAL_UART_Transmit(&huart3, "bytes_available=", sizeof("bytes_available="), 100);
-    HAL_UART_Transmit(&huart3, str, sizeof(str), 100);
+    //[DEBUG]
+    //HAL_UART_Transmit(&huart3, "bytes_available=", sizeof("bytes_available="), 100);
+    //HAL_UART_Transmit(&huart3, str, sizeof(str), 100);
     //HAL_UART_Transmit(&huart3, header_buffer, 4, 100);
     while (bytes_available--) {
         uint8_t data = rx_buffer.buffer[rx_buffer.tail];
@@ -285,7 +285,8 @@ void ESP01_ProcessReceivedData(void) {
 }
 
 static void ParseIPDPacket(uint16_t packet_start) {
-    HAL_UART_Transmit(&huart3,"IPD Packet DETECTED!!!",sizeof("IPD Packet DETECTED!!!"),100);
+    //[DEBUG]
+    //HAL_UART_Transmit(&huart3,"IPD Packet DETECTED!!!",sizeof("IPD Packet DETECTED!!!"),100);
     char temp_buf[64];
     uint16_t copy_len = 0;
     for (int i = 0; i < 64; i++) {
@@ -313,7 +314,8 @@ static void ParseIPDPacket(uint16_t packet_start) {
         uint16_t idx = (data_start + i) % RING_BUFFER_SIZE;
         data[i] = rx_buffer.buffer[idx];
     }
-    HAL_UART_Transmit(&huart3,data,data_len,150);
+    //[DEBUG]
+    //HAL_UART_Transmit(&huart3,data,data_len,150);
     if (data_callback) data_callback(0, data, data_len);
     free(data);
 }
