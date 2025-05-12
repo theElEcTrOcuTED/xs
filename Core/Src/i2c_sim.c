@@ -95,29 +95,29 @@ HAL_StatusTypeDef I2C_Sim_Mem_Read(I2C_Sim_HandleTypeDef *hi2c, uint16_t DevAddr
 static void I2C_Sim_Start(I2C_Sim_HandleTypeDef *hi2c) {
     HAL_GPIO_WritePin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_SET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin, GPIO_PIN_RESET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_RESET);
-    delay_us(5);
+    delay_us(1);
 }
 
 static void I2C_Sim_Stop(I2C_Sim_HandleTypeDef *hi2c) {
     HAL_GPIO_WritePin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin, GPIO_PIN_RESET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_SET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin, GPIO_PIN_SET);
-    delay_us(5);
+    delay_us(1);
 }
 
 static HAL_StatusTypeDef I2C_Sim_Wait_Ack(I2C_Sim_HandleTypeDef *hi2c) {
     uint32_t wait_time = 0;
 
     HAL_GPIO_WritePin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin, GPIO_PIN_SET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_SET);
-    delay_us(5);
+    delay_us(1);
 
     /* 带超时的ACK检测 */
     while(HAL_GPIO_ReadPin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin)) {
@@ -129,27 +129,27 @@ static HAL_StatusTypeDef I2C_Sim_Wait_Ack(I2C_Sim_HandleTypeDef *hi2c) {
     }
 
     HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_RESET);
-    delay_us(5);
+    delay_us(1);
     return HAL_OK;
 }
 
 static void I2C_Sim_Ack(I2C_Sim_HandleTypeDef *hi2c) {
     HAL_GPIO_WritePin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin, GPIO_PIN_RESET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_SET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_RESET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin, GPIO_PIN_SET);
 }
 
 static void I2C_Sim_NAck(I2C_Sim_HandleTypeDef *hi2c) {
     HAL_GPIO_WritePin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin, GPIO_PIN_SET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_SET);
-    delay_us(5);
+    delay_us(1);
     HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_RESET);
-    delay_us(5);
+    delay_us(1);
 }
 
 static HAL_StatusTypeDef I2C_Sim_WriteByte(I2C_Sim_HandleTypeDef *hi2c, uint8_t data) {
@@ -157,11 +157,11 @@ static HAL_StatusTypeDef I2C_Sim_WriteByte(I2C_Sim_HandleTypeDef *hi2c, uint8_t 
         HAL_GPIO_WritePin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin,
                          (data & 0x80) ? GPIO_PIN_SET : GPIO_PIN_RESET);
         data <<= 1;
-        delay_us(5);
+        delay_us(1);
         HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_SET);
-        delay_us(5);
+        delay_us(1);
         HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_RESET);
-        delay_us(5);
+        delay_us(1);
     }
     return I2C_Sim_Wait_Ack(hi2c);
 }
@@ -174,10 +174,10 @@ static uint8_t I2C_Sim_ReadByte(I2C_Sim_HandleTypeDef *hi2c) {
     for(uint8_t i = 0; i < 8; i++) {
         data <<= 1;
         HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_SET);
-        delay_us(5);
+        delay_us(1);
         if(HAL_GPIO_ReadPin(hi2c->SDA_GPIOx, hi2c->SDA_GPIO_Pin)) data |= 0x01;
         HAL_GPIO_WritePin(hi2c->SCL_GPIOx, hi2c->SCL_GPIO_Pin, GPIO_PIN_RESET);
-        delay_us(5);
+        delay_us(1);
     }
     return data;
 }

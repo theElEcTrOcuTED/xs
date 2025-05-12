@@ -125,6 +125,7 @@ int main(void)
   MX_TIM2_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   i2cs1.Timeout = 100;
   i2cs1.SCL_GPIOx = GPIOB;
@@ -176,16 +177,16 @@ int main(void)
 
 
   HAL_TIM_Base_Start_IT(&htim2);
-
+  //HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_UART_Transmit(&huart3,"main cycle_1",sizeof("main cycle_1"),100);
+
     /* USER CODE END WHILE */
-    ESP01_ProcessReceivedData();
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -240,6 +241,10 @@ void SystemClock_Config(void)
 long long ct = 1;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
   //TIM2定时器中断，触发频率100Hz，用于更新姿态
+  if(htim->Instance==TIM3) {
+
+    //ESP01_ProcessReceivedData();
+  }
   if(htim->Instance==TIM2) {
     //更新当前姿态
   /*
@@ -251,6 +256,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
       ct=3;
     else
       ct=0;*/
+    ESP01_ProcessReceivedData();
     ct+=1;
     float q0,q1,q2,q3;
     float ax,ay,az,gx,gy,gz;
@@ -273,7 +279,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     roll  = atan2f(2 * q2 * q3 + 2 * q0 * q1, -2 * q1 * q1 - 2 * q2* q2 + 1)* 57.3;	// roll
     yaw   = atan2f(2*(q1*q2 + q0*q3),q0*q0+q1*q1-q2*q2-q3*q3) * 57.3;	//yaw
     ins_update_current_quaternion(q0,q1,q2,q3);
-    ins_update_pos(ax,ay,az,1.0f/200);
+    ins_update_pos(ax,ay,az,1.0f/100);
     float posx,posy,posz;
     float vx,vy,vz;
     ins_get_position(&posx,&posy,&posz);
@@ -377,7 +383,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     memcpy(buffer+81,&gz,4);
     //索引85 - 88：数据包尾
     memcpy(buffer+85,"^END",4);
-    if(ct%2==0) {
+    if(1) {
       ESP01_SendTCPData(0,buffer,89);
     }
   }
@@ -397,8 +403,8 @@ void MasterESPDataHandler(uint8_t conn_id, uint8_t* data, uint16_t len){
    * 角速度阈值：
    * g_th  4bytes(float)
    */
-  HAL_UART_Transmit(&huart3,"接收到原始数据如下：",sizeof("接收到原始数据如下："),150);
-  HAL_UART_Transmit(&huart3,data,len,150);
+  //HAL_UART_Transmit(&huart3,"接收到原始数据如下：",sizeof("接收到原始数据如下："),150);
+  //HAL_UART_Transmit(&huart3,data,len,150);
   char* loc = strstr((char*)data,"^HEAD");
   if(loc != NULL) {
     loc+=5;//指针移动到^HEAD的数据包头标记的后面
@@ -408,6 +414,23 @@ void MasterESPDataHandler(uint8_t conn_id, uint8_t* data, uint16_t len){
     memcpy(&yaw_th,loc+8,4);
     memcpy(&a_th,loc+12,4);
     memcpy(&g_th,loc+16,4);
+    /*
+    HAL_UART_Transmit(&huart3,"pitch_th:",strlen("pitch_th:"),100);
+    char buffer1[50];
+    sprintf(buffer1, "%f", pitch_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
+    HAL_UART_Transmit(&huart3,"yaw_th:",strlen("yaw_th:"),100);
+    sprintf(buffer1, "%f", yaw_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
+    HAL_UART_Transmit(&huart3,"roll_th:",strlen("roll_th:"),100);
+    sprintf(buffer1, "%f", roll_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
+    HAL_UART_Transmit(&huart3,"a_th:",strlen("a_th:"),100);
+    sprintf(buffer1, "%f", a_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);
+    HAL_UART_Transmit(&huart3,"g_th:",strlen("g_th:"),100);
+    sprintf(buffer1, "%f", g_th);
+    HAL_UART_Transmit(&huart3,buffer1,strlen(buffer1),100);*/
   }
   else {
     //指针解引用错误，未找到数据包头

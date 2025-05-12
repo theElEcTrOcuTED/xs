@@ -23,16 +23,15 @@ typedef struct {
 static UART_HandleTypeDef* esp_huart;
 static RingBuffer rx_buffer = {0};
 static DataReceivedCallback data_callback = NULL;
-int IsMaster;
+//int IsMaster;
 // 私有函数声明
 void UART_RxCpltCallback(UART_HandleTypeDef *huart);
 static ESP01_Status WaitForResponse(const char* expect, uint32_t timeout);
-static void ParseIPDPacket(uint8_t* data, uint16_t len);
+static void ParseIPDPacket(uint16_t packet_start);
 
 // 初始化模块
 void ESP01_Init(UART_HandleTypeDef* huart, int isMaster) {
     esp_huart = huart;
-    IsMaster = isMaster;
     // 配置UART接收中断
     //  注意STM32的所有串口公用一个串口回调函数，所以如果需要非阻塞地同时使用多个串口，这里的回调函数需要重写
     //HAL_UART_RegisterCallback(esp_huart, HAL_UART_RX_COMPLETE_CB_ID, UART_RxCpltCallback);
@@ -219,17 +218,17 @@ static ESP01_Status WaitForResponse(const char* expect, uint32_t timeout_ms) {
         uint16_t index = 0;
 
         for (uint32_t retry = 0; retry < max_retry; retry++) {
-            bytes_available = (rx_buffer.head - rx_buffer.tail + RING_BUFFER_SIZE) % RING_BUFFER_SIZE;
+            uint16_t tail_temp = rx_buffer.tail;
+            bytes_available = (rx_buffer.head - tail_temp  + RING_BUFFER_SIZE) % RING_BUFFER_SIZE;
 
             while (bytes_available-- > 0) {
                 // 检查索引是否越界
                 if (index < sizeof(response) - 1) {
-                    response[index++] = rx_buffer.buffer[rx_buffer.tail];
+                    response[index++] = rx_buffer.buffer[tail_temp ];
                     response[index] = '\0'; // 添加终止符
                 }
                 // 无论是否存储，均移动tail指针以消费数据
-                rx_buffer.tail = (rx_buffer.tail + 1) % RING_BUFFER_SIZE;
-
+                tail_temp  = (tail_temp  + 1) % RING_BUFFER_SIZE;
                 // 检查匹配
                 if (strstr((char*)response, expect) != NULL) {
                     return ESP01_OK;
@@ -251,6 +250,7 @@ static ESP01_Status WaitForResponse(const char* expect, uint32_t timeout_ms) {
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     //[DEBUG]
     //HAL_UART_Transmit(&huart3,"Entered USART2 Interrupt",sizeof("Entered USART2 Interrupt"),100);
+    //HAL_UART_Transmit(&huart3, "c", sizeof("c"),10);
     if(huart == esp_huart) {
         rx_buffer.head = (rx_buffer.head + 1) % RING_BUFFER_SIZE;
         HAL_UART_Receive_IT(huart, &rx_buffer.buffer[rx_buffer.head], 1);
@@ -258,57 +258,64 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 }
 
 // 数据处理主循环
+// 修改后的函数
 void ESP01_ProcessReceivedData(void) {
-    uint16_t bytes_available = (rx_buffer.head - rx_buffer.tail) % RING_BUFFER_SIZE;
-    static uint8_t packet_buffer[256];
-    static uint16_t packet_index = 0;
-
-    while(bytes_available--) {
+    uint16_t bytes_available = (rx_buffer.head - rx_buffer.tail + RING_BUFFER_SIZE) % RING_BUFFER_SIZE;
+    static uint8_t header_buffer[4] = {0};
+    char str[20];
+    sprintf(str,"%d",bytes_available);
+    HAL_UART_Transmit(&huart3, "bytes_available=", sizeof("bytes_available="), 100);
+    HAL_UART_Transmit(&huart3, str, sizeof(str), 100);
+    //HAL_UART_Transmit(&huart3, header_buffer, 4, 100);
+    while (bytes_available--) {
         uint8_t data = rx_buffer.buffer[rx_buffer.tail];
+        uint16_t current_tail = rx_buffer.tail; // 记录当前tail位置
         rx_buffer.tail = (rx_buffer.tail + 1) % RING_BUFFER_SIZE;
 
-        // 检测IPD数据包
-        if(data == '+') {
-            if(packet_index >= 5 &&
-                memcmp(&packet_buffer[packet_index-4], "+IPD", 4) == 0) {
-                ParseIPDPacket(packet_buffer, packet_index);
-                packet_index = 0;
-            }
+        // 滑动窗口检测包头
+        memmove(header_buffer, header_buffer + 1, 3);
+        header_buffer[3] = data;
+        //HAL_UART_Transmit(&huart3, header_buffer, 4, 100);
+        if (memcmp(header_buffer, "+IPD", 4) == 0) {
+            // 包头起始位置是current_tail - 3（因为已经移动了tail）
+            uint16_t packet_start = (current_tail - 3 + RING_BUFFER_SIZE) % RING_BUFFER_SIZE;
+            ParseIPDPacket(packet_start);
         }
-
-        packet_buffer[packet_index++] = data;
-        if(packet_index >= sizeof(packet_buffer)) {
-            packet_index = 0; // 防止溢出
-        }
-        HAL_UART_Transmit(&huart3,packet_buffer,256,150);
     }
 }
 
-// 解析IPD数据包
-static void ParseIPDPacket(uint8_t* data, uint16_t len) {
-    // 格式: +IPD,<conn_id>,<len>:<data>
-    HAL_UART_Transmit(&huart3,"+IPD Packet detected",sizeof("+IPD Packet detected"),150);
-
-    char* ptr = strstr((char*)data, "+IPD");
-    if(ptr == NULL) return;
-    if(IsMaster) {
-        uint8_t conn_id = atoi(ptr + 5); // 跳过"+IPD,"
-        char* len_start = strchr(ptr, ',') + 1;
-        uint16_t data_len = atoi(len_start);
-        char* data_start = strchr(ptr, ':') + 1;
-
-        if(data_callback != NULL && data_len > 0) {
-            data_callback(conn_id, (uint8_t*)data_start, data_len);
+static void ParseIPDPacket(uint16_t packet_start) {
+    HAL_UART_Transmit(&huart3,"IPD Packet DETECTED!!!",sizeof("IPD Packet DETECTED!!!"),100);
+    char temp_buf[64];
+    uint16_t copy_len = 0;
+    for (int i = 0; i < 64; i++) {
+        uint16_t idx = (packet_start + i) % RING_BUFFER_SIZE;
+        temp_buf[i] = rx_buffer.buffer[idx];
+        if (temp_buf[i] == ':') {
+            copy_len = i + 1;
+            break;
         }
     }
-    else {//从机的单连接模式下+IPD数据包格式有所不同
-        uint16_t data_len = atoi(ptr + 5); // 跳过"+IPD,"
-        char* data_start = strchr(ptr, ':') + 1;
+    temp_buf[copy_len] = '\0';
 
-        if(data_callback != NULL && data_len > 0) {
-            data_callback(0, (uint8_t*)data_start, data_len);
-        }
+    char* comma = strchr(temp_buf, ',');
+    char* colon = strchr(temp_buf, ':');
+    if (!comma || !colon) return;
+
+    char len_str[16];
+    strncpy(len_str, comma + 1, colon - comma - 1);
+    len_str[colon - comma - 1] = '\0';
+    uint16_t data_len = atoi(len_str);
+
+    uint16_t data_start = (packet_start + (colon - temp_buf) + 1) % RING_BUFFER_SIZE;
+    uint8_t* data = malloc(data_len);
+    for (uint16_t i = 0; i < data_len; i++) {
+        uint16_t idx = (data_start + i) % RING_BUFFER_SIZE;
+        data[i] = rx_buffer.buffer[idx];
     }
+    HAL_UART_Transmit(&huart3,data,data_len,150);
+    if (data_callback) data_callback(0, data, data_len);
+    free(data);
 }
 
 // 设置数据接收回调
@@ -322,7 +329,8 @@ void ESP01_SendTCPData(uint8_t conn_id, uint8_t* data, uint16_t len) {
     snprintf(cmd, sizeof(cmd), "AT+CIPSEND=%d", len);
     ESP01_Status st = ESP01_SendCommand(cmd, ">", 1000);
     if(st == ESP01_OK) {
-        HAL_UART_Transmit_DMA(esp_huart, data, len);
+        //HAL_UART_Transmit_DMA(esp_huart, data, len);
+        HAL_UART_Transmit(esp_huart, data, len,100);
     }
     else if(st==ESP01_ERROR) {
         HAL_UART_Transmit(&huart3,"CIPSEND Command Error",sizeof("CIPSEND Command Error"),100);
